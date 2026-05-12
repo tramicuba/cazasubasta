@@ -40,13 +40,12 @@
     const SUPABASE_URL = 'https://bmmzvqfordvjgzkxzosu.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJtbXp2cWZvcmR2amd6a3h6b3N1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1MjAwODYsImV4cCI6MjA5NDA5NjA4Nn0.4mqHOHnoKamDBC78QY8A78bfGLL4GllvyHPLKrvBpAU';
     
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     
     let currentUser = null;
     
-    // Renderizar según estado de autenticación
     async function checkAuth() {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user } } = await sb.auth.getUser();
         if (user) {
             currentUser = user;
             renderAdminPanel();
@@ -74,7 +73,7 @@
         document.getElementById('loginBtn').onclick = async () => {
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
-            const { error } = await supabase.auth.signInWithPassword({ email, password });
+            const { error } = await sb.auth.signInWithPassword({ email, password });
             const msgDiv = document.getElementById('loginMessage');
             if (error) {
                 msgDiv.innerHTML = `<div class="message error">Error: ${error.message}</div>`;
@@ -84,28 +83,25 @@
         };
     }
     
-    // Panel principal
     async function renderAdminPanel() {
-        // Cargar datos iniciales
         const [departamentos, productos, config] = await Promise.all([
-            supabase.from('departamentos').select('*').order('nombre'),
-            supabase.from('productos').select('*').order('id', { ascending: false }),
-            supabase.from('configuracion').select('*').eq('clave', 'whatsapp_numero').single()
+            sb.from('departamentos').select('*').order('nombre'),
+            sb.from('productos').select('*').order('id', { ascending: false }),
+            sb.from('configuracion').select('*').eq('clave', 'whatsapp_numero').single()
         ]);
         
         const depts = departamentos.data || [];
         const prods = productos.data || [];
         let wspNumero = config.data?.valor || '521234567890';
         
-        // Obtener relaciones producto-departamento
-        const { data: relaciones } = await supabase.from('producto_departamento').select('*');
+        const { data: relaciones } = await sb.from('producto_departamento').select('*');
         const prodDeptMap = {};
         (relaciones || []).forEach(r => {
             if (!prodDeptMap[r.producto_id]) prodDeptMap[r.producto_id] = [];
             prodDeptMap[r.producto_id].push(r.departamento_id);
         });
         
-        let activeTab = 'productos'; // productos, departamentos, config
+        let activeTab = 'productos';
         
         function renderTabs() {
             return `
@@ -188,7 +184,6 @@
             renderAdminPanel();
         }
         
-        // Modal genérico para producto
         function showProductModal(product = null) {
             const isEdit = !!product;
             const modalDiv = document.createElement('div');
@@ -254,17 +249,16 @@
                 const precioCup = modalDiv.querySelector('#prodCup').value;
                 let foto_url = urlInput.value.trim() || null;
                 
-                // Subir archivo si se seleccionó
                 if (fileInput.files.length > 0) {
                     const file = fileInput.files[0];
                     const fileExt = file.name.split('.').pop();
                     const fileName = `${Date.now()}.${fileExt}`;
-                    const { data, error } = await supabase.storage.from('productos').upload(fileName, file);
+                    const { data, error } = await sb.storage.from('productos').upload(fileName, file);
                     if (error) {
                         alert('Error al subir imagen: ' + error.message);
                         return;
                     }
-                    const { data: { publicUrl } } = supabase.storage.from('productos').getPublicUrl(fileName);
+                    const { data: { publicUrl } } = sb.storage.from('productos').getPublicUrl(fileName);
                     foto_url = publicUrl;
                 }
                 
@@ -273,26 +267,24 @@
                 
                 let productoId = isEdit ? product.id : null;
                 if (isEdit) {
-                    const { error } = await supabase.from('productos').update({
+                    const { error } = await sb.from('productos').update({
                         nombre, descripcion, foto_url, precio_usd, precio_cup
                     }).eq('id', product.id);
                     if (error) return alert('Error actualizar: ' + error.message);
                 } else {
-                    const { data, error } = await supabase.from('productos').insert({
+                    const { data, error } = await sb.from('productos').insert({
                         nombre, descripcion, foto_url, precio_usd, precio_cup
                     }).select();
                     if (error) return alert('Error crear: ' + error.message);
                     productoId = data[0].id;
                 }
                 
-                // Actualizar relaciones con departamentos
                 const checkboxes = modalDiv.querySelectorAll('#deptCheckboxes input[type="checkbox"]');
                 const selectedDepts = Array.from(checkboxes).filter(cb => cb.checked).map(cb => parseInt(cb.value));
-                // Eliminar relaciones actuales
-                await supabase.from('producto_departamento').delete().eq('producto_id', productoId);
+                await sb.from('producto_departamento').delete().eq('producto_id', productoId);
                 if (selectedDepts.length > 0) {
                     const relacionesInsert = selectedDepts.map(deptId => ({ producto_id: productoId, departamento_id: deptId }));
-                    await supabase.from('producto_departamento').insert(relacionesInsert);
+                    await sb.from('producto_departamento').insert(relacionesInsert);
                 }
                 
                 modalDiv.remove();
@@ -309,10 +301,10 @@
             if (!nuevoNombre.trim()) return alert('El nombre no puede estar vacío');
             (async () => {
                 if (isEdit) {
-                    const { error } = await supabase.from('departamentos').update({ nombre: nuevoNombre.trim() }).eq('id', dept.id);
+                    const { error } = await sb.from('departamentos').update({ nombre: nuevoNombre.trim() }).eq('id', dept.id);
                     if (error) alert('Error: ' + error.message);
                 } else {
-                    const { error } = await supabase.from('departamentos').insert({ nombre: nuevoNombre.trim() });
+                    const { error } = await sb.from('departamentos').insert({ nombre: nuevoNombre.trim() });
                     if (error) alert('Error: ' + error.message);
                 }
                 refreshUI();
@@ -322,8 +314,7 @@
         function deleteDept(deptId, deptNombre) {
             if (!confirm(`¿Eliminar departamento "${deptNombre}"? Se eliminará la relación con productos pero no los productos.`)) return;
             (async () => {
-                // Las relaciones producto_departamento se eliminan en cascada por la FK
-                const { error } = await supabase.from('departamentos').delete().eq('id', deptId);
+                const { error } = await sb.from('departamentos').delete().eq('id', deptId);
                 if (error) alert('Error: ' + error.message);
                 else refreshUI();
             })();
@@ -332,14 +323,13 @@
         function deleteProduct(prodId) {
             if (!confirm('¿Eliminar producto? Se borrará completamente de la base de datos (incluyendo foto del storage).')) return;
             (async () => {
-                // Obtener foto_url para borrar del storage
-                const { data: prod } = await supabase.from('productos').select('foto_url').eq('id', prodId).single();
+                const { data: prod } = await sb.from('productos').select('foto_url').eq('id', prodId).single();
                 if (prod?.foto_url) {
                     const urlParts = prod.foto_url.split('/');
                     const fileName = urlParts[urlParts.length-1];
-                    if (fileName) await supabase.storage.from('productos').remove([fileName]).catch(console.error);
+                    if (fileName) await sb.storage.from('productos').remove([fileName]).catch(console.error);
                 }
-                const { error } = await supabase.from('productos').delete().eq('id', prodId);
+                const { error } = await sb.from('productos').delete().eq('id', prodId);
                 if (error) alert('Error: ' + error.message);
                 else refreshUI();
             })();
@@ -348,24 +338,21 @@
         function saveWhatsapp() {
             const newNum = document.getElementById('whatsappNum').value;
             (async () => {
-                const { error } = await supabase.from('configuracion').upsert({ clave: 'whatsapp_numero', valor: newNum });
+                const { error } = await sb.from('configuracion').upsert({ clave: 'whatsapp_numero', valor: newNum });
                 if (error) document.getElementById('configMsg').innerHTML = `<div class="message error">Error: ${error.message}</div>`;
                 else document.getElementById('configMsg').innerHTML = `<div class="message success">Número guardado</div>`;
             })();
         }
         
-        // Renderizar todo con eventos
         const appDiv = document.getElementById('app');
         appDiv.innerHTML = `<div class="container">${renderTabs()} <div id="tabContent"></div></div>`;
         
-        // Cargar contenido según tab activa
         function loadTabContent() {
             const contentDiv = document.getElementById('tabContent');
             if (activeTab === 'productos') contentDiv.innerHTML = renderProductos();
             else if (activeTab === 'departamentos') contentDiv.innerHTML = renderDepartamentos();
             else if (activeTab === 'config') contentDiv.innerHTML = renderConfig();
             
-            // Eventos dinámicos
             if (activeTab === 'productos') {
                 document.getElementById('newProductBtn')?.addEventListener('click', () => showProductModal(null));
                 document.querySelectorAll('.editProduct').forEach(btn => {
@@ -396,7 +383,6 @@
             }
         }
         
-        // Manejo de tabs
         document.querySelectorAll('.tab').forEach(tab => {
             tab.addEventListener('click', (e) => {
                 activeTab = tab.dataset.tab;
@@ -404,7 +390,7 @@
             });
         });
         document.getElementById('logoutBtn').onclick = async () => {
-            await supabase.auth.signOut();
+            await sb.auth.signOut();
             checkAuth();
         };
         loadTabContent();
