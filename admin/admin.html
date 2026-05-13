@@ -21,21 +21,23 @@
                 <input type="password" id="password" placeholder="••••••">
             </div>
             <button id="loginBtn" style="width:100%">Iniciar sesión</button>
+            <div id="userInfo" style="margin-top: 15px; font-size: 14px;"></div>
         </div>
     </div>
 
     <script src="auth.js"></script>
     <script>
-        // Mostrar el formulario inmediatamente
         document.addEventListener('DOMContentLoaded', function() {
-            // No redirigimos automáticamente, solo verificamos para saber si el usuario ya está logueado
-            if (window.checkAuth) {
-                window.checkAuth().then(user => {
+            // Mostrar si ya hay sesión activa (opcional)
+            if (window.supabaseClient) {
+                window.supabaseClient.auth.getUser().then(({ data: { user } }) => {
                     if (user) {
-                        // Si ya está logueado, lo enviamos a productos
-                        window.location.href = 'productos.html';
+                        document.getElementById('userInfo').innerHTML = `<div class="message info">Sesión activa como ${user.email}. <button id="logoutHereBtn" class="secondary">Cerrar sesión</button></div>`;
+                        document.getElementById('logoutHereBtn')?.addEventListener('click', () => {
+                            window.logout();
+                        });
                     }
-                }).catch(console.error);
+                });
             }
 
             const loginBtn = document.getElementById('loginBtn');
