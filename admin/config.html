@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Configuración</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+    <div class="navbar">
+        <a href="productos.html">Productos</a>
+        <a href="departamentos.html">Departamentos</a>
+        <a href="config.html">Configuración</a>
+        <button class="logout-btn" id="logoutBtn">Cerrar sesión</button>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <h2>Configuración general</h2>
+            <div id="configMessage"></div>
+            <div class="form-group">
+                <label>Número de WhatsApp para pedidos (código país sin '+', ejemplo: 521234567890)</label>
+                <input type="text" id="whatsappNum" placeholder="521234567890">
+            </div>
+            <button id="saveWspBtn">Guardar número</button>
+        </div>
+    </div>
+
+    <script src="auth.js"></script>
+    <script>
+        let whatsappNumero = '';
+
+        async function verificarAuth() {
+            const user = await window.checkAuth();
+            if (!user) {
+                window.location.href = 'admin.html';
+                return false;
+            }
+            return true;
+        }
+
+        async function cargarConfiguracion() {
+            const supabase = window.supabaseClient;
+            const { data, error } = await supabase
+                .from('configuracion')
+                .select('valor')
+                .eq('clave', 'whatsapp_numero')
+                .single();
+            
+            if (error && error.code !== 'PGRST116') { // PGRST116 = no rows
+                console.error('Error cargando configuración:', error);
+                document.getElementById('configMessage').innerHTML = '<div class="message error">Error al cargar configuración</div>';
+                return;
+            }
+            
+            whatsappNumero = data?.valor || '521234567890';
+            document.getElementById('whatsappNum').value = whatsappNumero;
+        }
+
+        async function guardarConfiguracion() {
+            const nuevoNumero = document.getElementById('whatsappNum').value.trim();
+            if (!nuevoNumero) {
+                document.getElementById('configMessage').innerHTML = '<div class="message error">El número no puede estar vacío</div>';
+                return;
+            }
+            
+            const supabase = window.supabaseClient;
+            const { error } = await supabase
+                .from('configuracion')
+                .upsert({ clave: 'whatsapp_numero', valor: nuevoNumero });
+            
+            if (error) {
+                document.getElementById('configMessage').innerHTML = `<div class="message error">Error al guardar: ${error.message}</div>`;
+            } else {
+                document.getElementById('configMessage').innerHTML = '<div class="message success">Número guardado correctamente</div>';
+                whatsappNumero = nuevoNumero;
+            }
+        }
+
+        // Cerrar sesión
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            await window.logout();
+        });
+
+        document.getElementById('saveWspBtn').addEventListener('click', guardarConfiguracion);
+
+        (async () => {
+            const ok = await verificarAuth();
+            if (ok) {
+                await cargarConfiguracion();
+            }
+        })();
+    </script>
+</body>
+</html>
