@@ -46,9 +46,9 @@
                 .from('configuracion')
                 .select('valor')
                 .eq('clave', 'whatsapp_numero')
-                .single();
+                .maybeSingle(); // .single() puede dar error si no hay fila, .maybeSingle() devuelve null
             
-            if (error && error.code !== 'PGRST116') { // PGRST116 = no rows
+            if (error) {
                 console.error('Error cargando configuración:', error);
                 document.getElementById('configMessage').innerHTML = '<div class="message error">Error al cargar configuración</div>';
                 return;
@@ -66,11 +66,13 @@
             }
             
             const supabase = window.supabaseClient;
+            // Usar upsert con onConflict
             const { error } = await supabase
                 .from('configuracion')
-                .upsert({ clave: 'whatsapp_numero', valor: nuevoNumero });
+                .upsert({ clave: 'whatsapp_numero', valor: nuevoNumero }, { onConflict: 'clave' });
             
             if (error) {
+                console.error('Error guardando:', error);
                 document.getElementById('configMessage').innerHTML = `<div class="message error">Error al guardar: ${error.message}</div>`;
             } else {
                 document.getElementById('configMessage').innerHTML = '<div class="message success">Número guardado correctamente</div>';
@@ -78,7 +80,6 @@
             }
         }
 
-        // Cerrar sesión
         document.getElementById('logoutBtn').addEventListener('click', async () => {
             await window.logout();
         });
