@@ -22,7 +22,7 @@
                 <button id="newDeptBtn">+ Nuevo departamento</button>
             </div>
             <div id="departamentosGrid" class="grid">
-                <!-- Los departamentos se cargarán aquí -->
+                <!-- Los departamentos se cargar&aacute;n aqu&iacute; -->
             </div>
         </div>
     </div>
@@ -43,10 +43,7 @@
         async function cargarDepartamentos() {
             const supabase = window.supabaseClient;
             const { data, error } = await supabase.from('departamentos').select('*').order('nombre');
-            if (error) {
-                console.error('Error al cargar departamentos:', error);
-                return;
-            }
+            if (error) { console.error(error); return; }
             departamentos = data || [];
             renderizarDepartamentos();
         }
@@ -57,9 +54,8 @@
                 grid.innerHTML = '<div class="card">No hay departamentos. Crea uno nuevo.</div>';
                 return;
             }
-
             grid.innerHTML = departamentos.map(d => `
-                <div class="dept-card" data-id="${d.id}">
+                <div class="dept-card">
                     <h3>${escapeHtml(d.nombre)}</h3>
                     <div style="display:flex; gap:8px; margin-top:10px">
                         <button class="editDeptBtn" data-id="${d.id}" data-nombre="${escapeHtml(d.nombre)}">✏️ Editar</button>
@@ -67,7 +63,6 @@
                     </div>
                 </div>
             `).join('');
-
             document.querySelectorAll('.editDeptBtn').forEach(btn => {
                 btn.addEventListener('click', () => editarDepartamento(parseInt(btn.dataset.id), btn.dataset.nombre));
             });
@@ -103,7 +98,7 @@
         }
 
         function eliminarDepartamento(id, nombre) {
-            if (!confirm(`¿Eliminar departamento "${nombre}"? Se perderán las relaciones con productos.`)) return;
+            if (!confirm(`¿Eliminar departamento "${nombre}"? Se perder&aacute;n las relaciones con productos (no los productos).`)) return;
             ejecutarEliminacion(id);
         }
 
@@ -116,7 +111,7 @@
 
         function escapeHtml(str) {
             if (!str) return '';
-            return str.replace(/[&<>]/g, function(m) {
+            return str.replace(/[&<>]/g, m => {
                 if (m === '&') return '&amp;';
                 if (m === '<') return '&lt;';
                 if (m === '>') return '&gt;';
@@ -124,14 +119,11 @@
             });
         }
 
-        document.getElementById('logoutBtn').addEventListener('click', async () => {
-            await window.logout();
-        });
+        document.getElementById('logoutBtn').addEventListener('click', async () => { await window.logout(); });
         document.getElementById('newDeptBtn').addEventListener('click', nuevoDepartamento);
 
         (async () => {
-            const ok = await verificarAuth();
-            if (ok) await cargarDepartamentos();
+            if (await verificarAuth()) await cargarDepartamentos();
         })();
     </script>
 </body>
