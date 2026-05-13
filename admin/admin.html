@@ -3,96 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - Configuraci&oacute;n</title>
+    <title>Admin - Login</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="admin.css">
 </head>
 <body>
-    <div class="navbar">
-        <a href="productos.html">Productos</a>
-        <a href="departamentos.html">Departamentos</a>
-        <a href="config.html">Configuraci&oacute;n</a>
-        <button class="logout-btn" id="logoutBtn">Cerrar sesi&oacute;n</button>
-    </div>
-
-    <div class="container">
+    <div class="container login-container">
         <div class="card">
-            <h2>Configuraci&oacute;n general</h2>
-            <div id="configMessage"></div>
-            <div class="current-number" id="currentNumberDisplay">
-                📱 N&uacute;mero actual: <span id="currentNumberSpan">---</span>
+            <h2>Acceso Administrador</h2>
+            <div id="loginMessage"></div>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="email" placeholder="admin@tutienda.com">
             </div>
             <div class="form-group">
-                <label>Nuevo n&uacute;mero de WhatsApp (c&oacute;digo pa&iacute;s sin '+', ejemplo: 521234567890)</label>
-                <input type="text" id="whatsappNum" placeholder="521234567890">
+                <label>Contrase&ntilde;a</label>
+                <input type="password" id="password" placeholder="••••••">
             </div>
-            <button id="saveWspBtn">Guardar n&uacute;mero</button>
+            <button id="loginBtn" style="width:100%">Iniciar sesi&oacute;n</button>
         </div>
     </div>
-
     <script src="auth.js"></script>
     <script>
-        async function verificarAuth() {
-            const user = await window.checkAuth();
-            if (!user) {
-                window.location.href = 'admin.html';
-                return false;
-            }
-            return true;
-        }
-
-        async function cargarConfiguracion() {
-            const supabase = window.supabaseClient;
-            const { data, error } = await supabase
-                .from('configuracion')
-                .select('valor')
-                .eq('clave', 'whatsapp_numero')
-                .maybeSingle();
+        document.getElementById('loginBtn').onclick = async () => {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const { error } = await window.supabaseClient.auth.signInWithPassword({ email, password });
             if (error) {
-                console.error('Error cargando configuraci&oacute;n:', error);
-                document.getElementById('configMessage').innerHTML = '<div class="message error">Error al cargar configuraci&oacute;n</div>';
-                return;
-            }
-            const numeroActual = data?.valor || '521234567890';
-            document.getElementById('currentNumberSpan').innerText = numeroActual;
-            document.getElementById('whatsappNum').value = '';
-            document.getElementById('whatsappNum').placeholder = `Ejemplo: ${numeroActual}`;
-        }
-
-        async function guardarConfiguracion() {
-            const nuevoNumero = document.getElementById('whatsappNum').value.trim();
-            if (!nuevoNumero) {
-                document.getElementById('configMessage').innerHTML = '<div class="message error">Debe escribir un n&uacute;mero</div>';
-                return;
-            }
-            const supabase = window.supabaseClient;
-            const { error } = await supabase
-                .from('configuracion')
-                .upsert({ clave: 'whatsapp_numero', valor: nuevoNumero }, { onConflict: 'clave' });
-            if (error) {
-                console.error('Error guardando:', error);
-                document.getElementById('configMessage').innerHTML = `<div class="message error">Error al guardar: ${error.message}</div>`;
+                document.getElementById('loginMessage').innerHTML = `<div class="message error">${error.message}</div>`;
             } else {
-                document.getElementById('configMessage').innerHTML = '<div class="message success">N&uacute;mero guardado correctamente</div>';
-                document.getElementById('currentNumberSpan').innerText = nuevoNumero;
-                document.getElementById('whatsappNum').value = '';
-                document.getElementById('whatsappNum').placeholder = `Ejemplo: ${nuevoNumero}`;
-                setTimeout(() => {
-                    const msgDiv = document.getElementById('configMessage');
-                    if (msgDiv) msgDiv.innerHTML = '';
-                }, 3000);
+                window.location.href = 'productos.html';
             }
-        }
-
-        document.getElementById('logoutBtn').addEventListener('click', async () => {
-            await window.logout();
-        });
-        document.getElementById('saveWspBtn').addEventListener('click', guardarConfiguracion);
-
-        (async () => {
-            const ok = await verificarAuth();
-            if (ok) await cargarConfiguracion();
-        })();
+        };
     </script>
 </body>
 </html>
