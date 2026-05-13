@@ -10,54 +10,87 @@
         body { margin: 0; background: #f3f4f6; }
         .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
         .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        h1, h2, h3 { margin-top: 0; }
+        h2, h3 { margin-top: 0; }
         input, select, textarea, button { padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; }
         button { background: #3b82f6; color: white; border: none; cursor: pointer; }
         button.danger { background: #ef4444; }
         button.secondary { background: #9ca3af; }
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; margin-top: 15px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; margin-top: 15px; }
         .product-card, .dept-card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: #f9fafb; }
         .product-card img { max-width: 100%; height: auto; border-radius: 8px; max-height: 150px; object-fit: cover; }
         .tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
         .tab { padding: 10px 20px; background: #e5e7eb; border-radius: 8px; cursor: pointer; }
         .tab.active { background: #3b82f6; color: white; }
-        .hidden { display: none; }
-        .login-form { max-width: 400px; margin: 100px auto; }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; }
         .message { padding: 10px; border-radius: 8px; margin-bottom: 15px; }
         .error { background: #fee2e2; color: #dc2626; }
         .success { background: #dcfce7; color: #16a34a; }
-        button:disabled { opacity: 0.5; cursor: not-allowed; }
-        .flex-between { display: flex; justify-content: space-between; align-items: center; }
     </style>
 </head>
 <body>
 <div id="app"></div>
 
 <script>
-    // ================= CONFIGURACIÓN ÚNICA =================
+    // ========== CONFIGURACIÓN ==========
     const SUPABASE_URL = 'https://hopssnvzzcwgromqsyyj.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhvcHNzbnZ6emN3Z3JvbXFzeXlqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2MTczNTcsImV4cCI6MjA5NDE5MzM1N30.jAgmJV_eq4MkWboMgqDMYbCF5Kjp3nhn21DQ7xsHGCM';
     
-    // Cliente único - sin conflicto de nombre
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     
     let currentUser = null;
+    let departamentosGlobal = [];
+    let productosGlobal = [];
+    let relacionesGlobal = {};
+    let whatsappNumeroGlobal = '';
     
     async function checkAuth() {
-        const { data: { user } } = await supabaseClient.auth.getUser();
+        const { data: { user } } = await supabase.auth.getUser();
         if (user) {
             currentUser = user;
+            console.log('Usuario autenticado:', user.email);
+            await cargarDatosGlobales();
             renderAdminPanel();
         } else {
             renderLogin();
         }
     }
     
+    async function cargarDatosGlobales() {
+        console.log('Cargando datos globales...');
+        // Departamentos
+        const { data: depts, error: e1 } = await supabase.from('departamentos').select('*').order('nombre');
+        if (e1) console.error('Error cargando departamentos:', e1);
+        else departamentosGlobal = depts || [];
+        
+        // Productos
+        const { data: prods, error: e2 } = await supabase.from('productos').select('*').order('id', { ascending: false });
+        if (e2) console.error('Error cargando productos:', e2);
+        else productosGlobal = prods || [];
+        
+        // Relaciones
+        const { data: rels, error: e3 } = await supabase.from('producto_departamento').select('*');
+        if (e3) console.error('Error cargando relaciones:', e3);
+        else {
+            relacionesGlobal = {};
+            (rels || []).forEach(r => {
+                if (!relacionesGlobal[r.producto_id]) relacionesGlobal[r.producto_id] = [];
+                relacionesGlobal[r.producto_id].push(r.departamento_id);
+            });
+        }
+        
+        // Configuración WhatsApp
+        const { data: conf, error: e4 } = await supabase.from('configuracion').select('*').eq('clave', 'whatsapp_numero').single();
+        if (e4 && e4.code !== 'PGRST116') console.error('Error cargando config:', e4);
+        whatsappNumeroGlobal = conf?.valor || '521234567890';
+        
+        console.log(`Departamentos: ${departamentosGlobal.length}, Productos: ${productosGlobal.length}`);
+    }
+    
     function renderLogin() {
         document.getElementById('app').innerHTML = `
-            <div class="login-form card">
+            <div class="card" style="max-width:400px; margin:100px auto;">
                 <h2>Acceso Administrador</h2>
                 <div id="loginMessage"></div>
                 <div class="form-group">
@@ -74,10 +107,9 @@
         document.getElementById('loginBtn').onclick = async () => {
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
-            const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-            const msgDiv = document.getElementById('loginMessage');
+            const { error } = await supabase.auth.signInWithPassword({ email, password });
             if (error) {
-                msgDiv.innerHTML = `<div class="message error">Error: ${error.message}</div>`;
+                document.getElementById('loginMessage').innerHTML = `<div class="message error">${error.message}</div>`;
             } else {
                 checkAuth();
             }
@@ -85,315 +117,323 @@
     }
     
     async function renderAdminPanel() {
-        // Obtener datos
-        const { data: depts, error: deptError } = await supabaseClient.from('departamentos').select('*').order('nombre');
-        const { data: prods, error: prodError } = await supabaseClient.from('productos').select('*').order('id', { ascending: false });
-        const { data: configData, error: configError } = await supabaseClient.from('configuracion').select('*').eq('clave', 'whatsapp_numero').single();
+        await cargarDatosGlobales(); // refrescar datos
+        const appDiv = document.getElementById('app');
+        appDiv.innerHTML = `
+            <div class="container">
+                <div class="tabs">
+                    <div class="tab" data-tab="productos">?? Productos</div>
+                    <div class="tab" data-tab="departamentos">?? Departamentos</div>
+                    <div class="tab" data-tab="config">?? Configuración</div>
+                    <div style="flex:1"></div>
+                    <button id="logoutBtn" class="secondary">Cerrar sesión</button>
+                </div>
+                <div id="tabContent"></div>
+            </div>
+        `;
         
-        if (deptError) console.error('Error departamentos:', deptError);
-        if (prodError) console.error('Error productos:', prodError);
+        // Manejo de pestañas
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabName = tab.dataset.tab;
+                cargarPestana(tabName);
+                // Marcar activo
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+            });
+        });
+        document.getElementById('logoutBtn').onclick = async () => {
+            await supabase.auth.signOut();
+            checkAuth();
+        };
+        // Cargar primera pestaña (productos)
+        const primeraPestana = document.querySelector('.tab');
+        if (primeraPestana) primeraPestana.classList.add('active');
+        cargarPestana('productos');
+    }
+    
+    async function cargarPestana(tabName) {
+        const contentDiv = document.getElementById('tabContent');
+        if (!contentDiv) return;
         
-        const departamentos = depts || [];
+        if (tabName === 'productos') {
+            await renderProductos(contentDiv);
+        } else if (tabName === 'departamentos') {
+            await renderDepartamentos(contentDiv);
+        } else if (tabName === 'config') {
+            renderConfig(contentDiv);
+        }
+    }
+    
+    async function renderProductos(container) {
+        // Asegurar datos actualizados
+        const { data: prods } = await supabase.from('productos').select('*').order('id', { ascending: false });
         const productos = prods || [];
-        let wspNumero = configData?.valor || '521234567890';
-        
-        // Obtener relaciones producto-departamento
-        const { data: relaciones } = await supabaseClient.from('producto_departamento').select('*');
+        const { data: depts } = await supabase.from('departamentos').select('*');
+        const departamentos = depts || [];
+        const { data: rels } = await supabase.from('producto_departamento').select('*');
         const prodDeptMap = {};
-        (relaciones || []).forEach(r => {
+        (rels || []).forEach(r => {
             if (!prodDeptMap[r.producto_id]) prodDeptMap[r.producto_id] = [];
             prodDeptMap[r.producto_id].push(r.departamento_id);
         });
         
-        let activeTab = 'productos';
-        
-        function renderTabs() {
-            return `
-                <div class="tabs">
-                    <div class="tab ${activeTab === 'productos' ? 'active' : ''}" data-tab="productos">?? Productos</div>
-                    <div class="tab ${activeTab === 'departamentos' ? 'active' : ''}" data-tab="departamentos">?? Departamentos</div>
-                    <div class="tab ${activeTab === 'config' ? 'active' : ''}" data-tab="config">?? Configuración</div>
-                    <div style="flex:1"></div>
-                    <button id="logoutBtn" class="secondary">Cerrar sesión</button>
+        container.innerHTML = `
+            <div class="card">
+                <div class="flex-between">
+                    <h2>Productos</h2>
+                    <button id="newProductBtn">+ Nuevo producto</button>
                 </div>
-            `;
-        }
-        
-        function renderProductos() {
-            return `
-                <div class="card">
-                    <div class="flex-between">
-                        <h2>Productos</h2>
-                        <button id="newProductBtn">+ Nuevo producto</button>
-                    </div>
-                    <div class="grid">
-                        ${productos.map(p => `
-                            <div class="product-card">
-                                ${p.foto_url ? `<img src="${p.foto_url}" alt="${p.nombre}">` : '<div style="height:150px; background:#e5e7eb; display:flex; align-items:center; justify-content:center">Sin foto</div>'}
-                                <h3>${escapeHtml(p.nombre)}</h3>
-                                <p><small>${p.descripcion ? escapeHtml(p.descripcion.substring(0,80)) : 'Sin descripción'}</small></p>
-                                <p><strong>USD:</strong> ${p.precio_usd !== null ? '$'+p.precio_usd : 'No'}</p>
-                                <p><strong>CUP:</strong> ${p.precio_cup !== null ? p.precio_cup+' CUP' : 'No'}</p>
-                                <p><strong>Departamentos:</strong> ${(prodDeptMap[p.id] || []).map(did => departamentos.find(d => d.id===did)?.nombre).filter(Boolean).join(', ') || 'Ninguno'}</p>
-                                <div style="display:flex; gap:8px; margin-top:10px">
-                                    <button class="editProduct" data-id="${p.id}">?? Editar</button>
-                                    <button class="deleteProduct danger" data-id="${p.id}">?? Eliminar</button>
-                                </div>
+                <div class="grid">
+                    ${productos.map(p => `
+                        <div class="product-card">
+                            ${p.foto_url ? `<img src="${p.foto_url}" alt="${p.nombre}">` : '<div style="height:150px; background:#e5e7eb; display:flex; align-items:center; justify-content:center">Sin foto</div>'}
+                            <h3>${escapeHtml(p.nombre)}</h3>
+                            <p><small>${p.descripcion ? escapeHtml(p.descripcion.substring(0,80)) : 'Sin descripción'}</small></p>
+                            <p><strong>USD:</strong> ${p.precio_usd !== null ? '$'+p.precio_usd : 'No'}</p>
+                            <p><strong>CUP:</strong> ${p.precio_cup !== null ? p.precio_cup+' CUP' : 'No'}</p>
+                            <p><strong>Departamentos:</strong> ${(prodDeptMap[p.id] || []).map(did => departamentos.find(d => d.id===did)?.nombre).filter(Boolean).join(', ') || 'Ninguno'}</p>
+                            <div style="display:flex; gap:8px; margin-top:10px">
+                                <button class="editProduct" data-id="${p.id}">?? Editar</button>
+                                <button class="deleteProduct danger" data-id="${p.id}">?? Eliminar</button>
                             </div>
-                        `).join('')}
-                        ${productos.length === 0 ? '<div class="card">No hay productos. Crea uno nuevo.</div>' : ''}
-                    </div>
-                </div>
-            `;
-        }
-        
-        function renderDepartamentos() {
-            return `
-                <div class="card">
-                    <div class="flex-between">
-                        <h2>Departamentos</h2>
-                        <button id="newDeptBtn">+ Nuevo departamento</button>
-                    </div>
-                    <div class="grid">
-                        ${departamentos.map(d => `
-                            <div class="dept-card">
-                                <h3>${escapeHtml(d.nombre)}</h3>
-                                <div style="display:flex; gap:8px; margin-top:10px">
-                                    <button class="editDept" data-id="${d.id}" data-nombre="${escapeHtml(d.nombre)}">?? Editar</button>
-                                    <button class="deleteDept danger" data-id="${d.id}" data-nombre="${escapeHtml(d.nombre)}">?? Eliminar</button>
-                                </div>
-                            </div>
-                        `).join('')}
-                        ${departamentos.length === 0 ? '<div class="card">No hay departamentos. Crea uno.</div>' : ''}
-                    </div>
-                </div>
-            `;
-        }
-        
-        function renderConfig() {
-            return `
-                <div class="card">
-                    <h2>Configuración general</h2>
-                    <div class="form-group">
-                        <label>Número de WhatsApp (código país sin '+', ej: 521234567890)</label>
-                        <input type="text" id="whatsappNum" value="${wspNumero}">
-                    </div>
-                    <button id="saveWspBtn">Guardar número</button>
-                    <div id="configMsg"></div>
-                </div>
-            `;
-        }
-        
-        function showProductModal(product = null) {
-            const isEdit = !!product;
-            const modalDiv = document.createElement('div');
-            modalDiv.style.position = 'fixed'; modalDiv.style.top = '0'; modalDiv.style.left = '0';
-            modalDiv.style.width = '100%'; modalDiv.style.height = '100%'; modalDiv.style.backgroundColor = 'rgba(0,0,0,0.5)';
-            modalDiv.style.display = 'flex'; modalDiv.style.alignItems = 'center'; modalDiv.style.justifyContent = 'center';
-            modalDiv.style.zIndex = '1000';
-            
-            const formHtml = `
-                <div style="background:white; max-width:500px; width:90%; border-radius:12px; padding:20px; max-height:90vh; overflow-y:auto">
-                    <h2>${isEdit ? 'Editar producto' : 'Nuevo producto'}</h2>
-                    <div class="form-group">
-                        <label>Nombre *</label>
-                        <input type="text" id="prodNombre" value="${isEdit ? escapeHtml(product.nombre) : ''}">
-                    </div>
-                    <div class="form-group">
-                        <label>Descripción (opcional)</label>
-                        <textarea id="prodDesc" rows="3">${isEdit && product.descripcion ? escapeHtml(product.descripcion) : ''}</textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>Precio USD (vacío = no disponible)</label>
-                        <input type="number" step="0.01" id="prodUsd" value="${isEdit && product.precio_usd !== null ? product.precio_usd : ''}">
-                    </div>
-                    <div class="form-group">
-                        <label>Precio CUP (vacío = no disponible)</label>
-                        <input type="number" step="0.01" id="prodCup" value="${isEdit && product.precio_cup !== null ? product.precio_cup : ''}">
-                    </div>
-                    <div class="form-group">
-                        <label>Foto (URL o subir archivo)</label>
-                        <input type="file" id="prodFotoFile" accept="image/*">
-                        ${isEdit && product.foto_url ? `<div><img src="${product.foto_url}" style="max-width:100px; margin-top:5px"><br><small>Actual: <a href="${product.foto_url}" target="_blank">ver</a></small></div>` : ''}
-                        <input type="text" id="prodFotoUrl" placeholder="O pegar URL directa" style="margin-top:5px" value="${isEdit && product.foto_url ? product.foto_url : ''}">
-                    </div>
-                    <div class="form-group">
-                        <label>Departamentos</label>
-                        <div id="deptCheckboxes">
-                            ${departamentos.map(d => `
-                                <label style="display:block">
-                                    <input type="checkbox" value="${d.id}" ${prodDeptMap[product?.id]?.includes(d.id) ? 'checked' : ''}> ${escapeHtml(d.nombre)}
-                                </label>
-                            `).join('')}
                         </div>
-                    </div>
-                    <div style="display:flex; gap:10px; margin-top:20px">
-                        <button id="modalSaveBtn">Guardar</button>
-                        <button id="modalCancelBtn" class="secondary">Cancelar</button>
-                    </div>
+                    `).join('')}
+                    ${productos.length === 0 ? '<div class="card">No hay productos. Crea uno nuevo.</div>' : ''}
                 </div>
-            `;
-            modalDiv.innerHTML = formHtml;
-            document.body.appendChild(modalDiv);
-            
-            const saveBtn = modalDiv.querySelector('#modalSaveBtn');
-            const cancelBtn = modalDiv.querySelector('#modalCancelBtn');
-            const fileInput = modalDiv.querySelector('#prodFotoFile');
-            const urlInput = modalDiv.querySelector('#prodFotoUrl');
-            
-            saveBtn.onclick = async () => {
-                const nombre = modalDiv.querySelector('#prodNombre').value.trim();
-                if (!nombre) return alert('El nombre es obligatorio');
-                const descripcion = modalDiv.querySelector('#prodDesc').value;
-                const precioUsd = modalDiv.querySelector('#prodUsd').value;
-                const precioCup = modalDiv.querySelector('#prodCup').value;
-                let foto_url = urlInput.value.trim() || null;
-                
-                if (fileInput.files.length > 0) {
-                    const file = fileInput.files[0];
-                    const fileExt = file.name.split('.').pop();
-                    const fileName = `${Date.now()}.${fileExt}`;
-                    const { error } = await supabaseClient.storage.from('productos').upload(fileName, file);
-                    if (error) {
-                        alert('Error al subir imagen: ' + error.message);
-                        return;
-                    }
-                    const { data: { publicUrl } } = supabaseClient.storage.from('productos').getPublicUrl(fileName);
-                    foto_url = publicUrl;
-                }
-                
-                const precio_usd = precioUsd === '' ? null : parseFloat(precioUsd);
-                const precio_cup = precioCup === '' ? null : parseFloat(precioCup);
-                
-                let productoId = isEdit ? product.id : null;
-                if (isEdit) {
-                    const { error } = await supabaseClient.from('productos').update({
-                        nombre, descripcion, foto_url, precio_usd, precio_cup
-                    }).eq('id', product.id);
-                    if (error) return alert('Error actualizar: ' + error.message);
-                } else {
-                    const { data, error } = await supabaseClient.from('productos').insert({
-                        nombre, descripcion, foto_url, precio_usd, precio_cup
-                    }).select();
-                    if (error) return alert('Error crear: ' + error.message);
-                    productoId = data[0].id;
-                }
-                
-                const checkboxes = modalDiv.querySelectorAll('#deptCheckboxes input[type="checkbox"]');
-                const selectedDepts = Array.from(checkboxes).filter(cb => cb.checked).map(cb => parseInt(cb.value));
-                await supabaseClient.from('producto_departamento').delete().eq('producto_id', productoId);
-                if (selectedDepts.length > 0) {
-                    const relacionesInsert = selectedDepts.map(deptId => ({ producto_id: productoId, departamento_id: deptId }));
-                    await supabaseClient.from('producto_departamento').insert(relacionesInsert);
-                }
-                
-                modalDiv.remove();
-                renderAdminPanel();
-            };
-            cancelBtn.onclick = () => modalDiv.remove();
-        }
+            </div>
+        `;
         
-        function showDeptModal(dept = null) {
-            const isEdit = !!dept;
-            const nombreInicial = isEdit ? dept.nombre : '';
-            const nuevoNombre = prompt(`${isEdit ? 'Editar' : 'Nuevo'} departamento:`, nombreInicial);
-            if (!nuevoNombre || !nuevoNombre.trim()) return alert('El nombre no puede estar vacío');
-            (async () => {
-                if (isEdit) {
-                    const { error } = await supabaseClient.from('departamentos').update({ nombre: nuevoNombre.trim() }).eq('id', dept.id);
-                    if (error) alert('Error: ' + error.message);
-                } else {
-                    const { error } = await supabaseClient.from('departamentos').insert({ nombre: nuevoNombre.trim() });
-                    if (error) alert('Error: ' + error.message);
-                }
-                renderAdminPanel();
-            })();
-        }
+        // Eventos para productos
+        document.getElementById('newProductBtn')?.addEventListener('click', () => showProductModal(null, departamentos, prodDeptMap));
+        document.querySelectorAll('.editProduct').forEach(btn => {
+            const id = parseInt(btn.dataset.id);
+            const prod = productos.find(p => p.id === id);
+            btn.addEventListener('click', () => showProductModal(prod, departamentos, prodDeptMap));
+        });
+        document.querySelectorAll('.deleteProduct').forEach(btn => {
+            const id = parseInt(btn.dataset.id);
+            btn.addEventListener('click', () => deleteProduct(id));
+        });
+    }
+    
+    async function renderDepartamentos(container) {
+        const { data: depts } = await supabase.from('departamentos').select('*').order('nombre');
+        const departamentos = depts || [];
+        console.log('Renderizando departamentos, cantidad:', departamentos.length);
         
-        function deleteDept(deptId, deptNombre) {
-            if (!confirm(`¿Eliminar "${deptNombre}"?`)) return;
-            (async () => {
-                const { error } = await supabaseClient.from('departamentos').delete().eq('id', deptId);
-                if (error) alert('Error: ' + error.message);
-                else renderAdminPanel();
-            })();
-        }
+        container.innerHTML = `
+            <div class="card">
+                <div class="flex-between">
+                    <h2>Departamentos</h2>
+                    <button id="newDeptBtn">+ Nuevo departamento</button>
+                </div>
+                <div class="grid">
+                    ${departamentos.map(d => `
+                        <div class="dept-card">
+                            <h3>${escapeHtml(d.nombre)}</h3>
+                            <div style="display:flex; gap:8px; margin-top:10px">
+                                <button class="editDept" data-id="${d.id}" data-nombre="${escapeHtml(d.nombre)}">?? Editar</button>
+                                <button class="deleteDept danger" data-id="${d.id}" data-nombre="${escapeHtml(d.nombre)}">?? Eliminar</button>
+                            </div>
+                        </div>
+                    `).join('')}
+                    ${departamentos.length === 0 ? '<div class="card">No hay departamentos. Crea uno.</div>' : ''}
+                </div>
+            </div>
+        `;
         
-        function deleteProduct(prodId) {
-            if (!confirm('¿Eliminar producto? Se borrará completamente.')) return;
-            (async () => {
-                const { data: prod } = await supabaseClient.from('productos').select('foto_url').eq('id', prodId).single();
-                if (prod?.foto_url) {
-                    const fileName = prod.foto_url.split('/').pop();
-                    if (fileName) await supabaseClient.storage.from('productos').remove([fileName]).catch(console.error);
-                }
-                const { error } = await supabaseClient.from('productos').delete().eq('id', prodId);
-                if (error) alert('Error: ' + error.message);
-                else renderAdminPanel();
-            })();
-        }
-        
-        async function saveWhatsapp() {
+        // Eventos
+        document.getElementById('newDeptBtn')?.addEventListener('click', () => showDeptModal(null));
+        document.querySelectorAll('.editDept').forEach(btn => {
+            const id = parseInt(btn.dataset.id);
+            const nombre = btn.dataset.nombre;
+            btn.addEventListener('click', () => showDeptModal({ id, nombre }));
+        });
+        document.querySelectorAll('.deleteDept').forEach(btn => {
+            const id = parseInt(btn.dataset.id);
+            const nombre = btn.dataset.nombre;
+            btn.addEventListener('click', () => deleteDept(id, nombre));
+        });
+    }
+    
+    function renderConfig(container) {
+        container.innerHTML = `
+            <div class="card">
+                <h2>Configuración general</h2>
+                <div class="form-group">
+                    <label>Número de WhatsApp (código país sin '+', ej: 521234567890)</label>
+                    <input type="text" id="whatsappNum" value="${whatsappNumeroGlobal}">
+                </div>
+                <button id="saveWspBtn">Guardar número</button>
+                <div id="configMsg"></div>
+            </div>
+        `;
+        document.getElementById('saveWspBtn')?.addEventListener('click', async () => {
             const newNum = document.getElementById('whatsappNum').value;
-            const { error } = await supabaseClient.from('configuracion').upsert({ clave: 'whatsapp_numero', valor: newNum });
+            const { error } = await supabase.from('configuracion').upsert({ clave: 'whatsapp_numero', valor: newNum });
             const msgDiv = document.getElementById('configMsg');
             if (error) msgDiv.innerHTML = `<div class="message error">Error: ${error.message}</div>`;
             else msgDiv.innerHTML = `<div class="message success">Número guardado</div>`;
-        }
-        
-        // Construir interfaz
-        const appDiv = document.getElementById('app');
-        appDiv.innerHTML = `<div class="container">${renderTabs()} <div id="tabContent"></div></div>`;
-        
-        function loadTabContent() {
-            const contentDiv = document.getElementById('tabContent');
-            if (activeTab === 'productos') contentDiv.innerHTML = renderProductos();
-            else if (activeTab === 'departamentos') contentDiv.innerHTML = renderDepartamentos();
-            else if (activeTab === 'config') contentDiv.innerHTML = renderConfig();
-            
-            // Eventos
-            if (activeTab === 'productos') {
-                document.getElementById('newProductBtn')?.addEventListener('click', () => showProductModal(null));
-                document.querySelectorAll('.editProduct').forEach(btn => {
-                    const id = parseInt(btn.dataset.id);
-                    const prod = productos.find(p => p.id === id);
-                    btn.addEventListener('click', () => showProductModal(prod));
-                });
-                document.querySelectorAll('.deleteProduct').forEach(btn => {
-                    const id = parseInt(btn.dataset.id);
-                    btn.addEventListener('click', () => deleteProduct(id));
-                });
-            }
-            if (activeTab === 'departamentos') {
-                document.getElementById('newDeptBtn')?.addEventListener('click', () => showDeptModal(null));
-                document.querySelectorAll('.editDept').forEach(btn => {
-                    const id = parseInt(btn.dataset.id);
-                    const nombre = btn.dataset.nombre;
-                    btn.addEventListener('click', () => showDeptModal({ id, nombre }));
-                });
-                document.querySelectorAll('.deleteDept').forEach(btn => {
-                    const id = parseInt(btn.dataset.id);
-                    const nombre = btn.dataset.nombre;
-                    btn.addEventListener('click', () => deleteDept(id, nombre));
-                });
-            }
-            if (activeTab === 'config') {
-                document.getElementById('saveWspBtn')?.addEventListener('click', saveWhatsapp);
-            }
-        }
-        
-        // Cambiar pestañas
-        document.querySelectorAll('.tab').forEach(tab => {
-            tab.addEventListener('click', (e) => {
-                activeTab = tab.dataset.tab;
-                renderAdminPanel();
-            });
         });
-        document.getElementById('logoutBtn').onclick = async () => {
-            await supabaseClient.auth.signOut();
-            checkAuth();
+    }
+    
+    // Funciones de modales (similares a la versión anterior pero usando 'supabase')
+    function showProductModal(product = null, departamentos, prodDeptMap) {
+        const isEdit = !!product;
+        const modalDiv = document.createElement('div');
+        modalDiv.style.position = 'fixed'; modalDiv.style.top = '0'; modalDiv.style.left = '0';
+        modalDiv.style.width = '100%'; modalDiv.style.height = '100%'; modalDiv.style.backgroundColor = 'rgba(0,0,0,0.5)';
+        modalDiv.style.display = 'flex'; modalDiv.style.alignItems = 'center'; modalDiv.style.justifyContent = 'center';
+        modalDiv.style.zIndex = '1000';
+        
+        const formHtml = `
+            <div style="background:white; max-width:500px; width:90%; border-radius:12px; padding:20px; max-height:90vh; overflow-y:auto">
+                <h2>${isEdit ? 'Editar producto' : 'Nuevo producto'}</h2>
+                <div class="form-group">
+                    <label>Nombre *</label>
+                    <input type="text" id="prodNombre" value="${isEdit ? escapeHtml(product.nombre) : ''}">
+                </div>
+                <div class="form-group">
+                    <label>Descripción (opcional)</label>
+                    <textarea id="prodDesc" rows="3">${isEdit && product.descripcion ? escapeHtml(product.descripcion) : ''}</textarea>
+                </div>
+                <div class="form-group">
+                    <label>Precio USD (vacío = no disponible)</label>
+                    <input type="number" step="0.01" id="prodUsd" value="${isEdit && product.precio_usd !== null ? product.precio_usd : ''}">
+                </div>
+                <div class="form-group">
+                    <label>Precio CUP (vacío = no disponible)</label>
+                    <input type="number" step="0.01" id="prodCup" value="${isEdit && product.precio_cup !== null ? product.precio_cup : ''}">
+                </div>
+                <div class="form-group">
+                    <label>Foto (URL o subir archivo)</label>
+                    <input type="file" id="prodFotoFile" accept="image/*">
+                    ${isEdit && product.foto_url ? `<div><img src="${product.foto_url}" style="max-width:100px; margin-top:5px"><br><small>Actual: <a href="${product.foto_url}" target="_blank">ver</a></small></div>` : ''}
+                    <input type="text" id="prodFotoUrl" placeholder="O pegar URL directa" style="margin-top:5px" value="${isEdit && product.foto_url ? product.foto_url : ''}">
+                </div>
+                <div class="form-group">
+                    <label>Departamentos</label>
+                    <div id="deptCheckboxes">
+                        ${departamentos.map(d => `
+                            <label style="display:block">
+                                <input type="checkbox" value="${d.id}" ${prodDeptMap[product?.id]?.includes(d.id) ? 'checked' : ''}> ${escapeHtml(d.nombre)}
+                            </label>
+                        `).join('')}
+                    </div>
+                </div>
+                <div style="display:flex; gap:10px; margin-top:20px">
+                    <button id="modalSaveBtn">Guardar</button>
+                    <button id="modalCancelBtn" class="secondary">Cancelar</button>
+                </div>
+            </div>
+        `;
+        modalDiv.innerHTML = formHtml;
+        document.body.appendChild(modalDiv);
+        
+        const saveBtn = modalDiv.querySelector('#modalSaveBtn');
+        const cancelBtn = modalDiv.querySelector('#modalCancelBtn');
+        const fileInput = modalDiv.querySelector('#prodFotoFile');
+        const urlInput = modalDiv.querySelector('#prodFotoUrl');
+        
+        saveBtn.onclick = async () => {
+            const nombre = modalDiv.querySelector('#prodNombre').value.trim();
+            if (!nombre) return alert('El nombre es obligatorio');
+            const descripcion = modalDiv.querySelector('#prodDesc').value;
+            const precioUsd = modalDiv.querySelector('#prodUsd').value;
+            const precioCup = modalDiv.querySelector('#prodCup').value;
+            let foto_url = urlInput.value.trim() || null;
+            
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                const fileExt = file.name.split('.').pop();
+                const fileName = `${Date.now()}.${fileExt}`;
+                const { error } = await supabase.storage.from('productos').upload(fileName, file);
+                if (error) {
+                    alert('Error al subir imagen: ' + error.message);
+                    return;
+                }
+                const { data: { publicUrl } } = supabase.storage.from('productos').getPublicUrl(fileName);
+                foto_url = publicUrl;
+            }
+            
+            const precio_usd = precioUsd === '' ? null : parseFloat(precioUsd);
+            const precio_cup = precioCup === '' ? null : parseFloat(precioCup);
+            
+            let productoId = isEdit ? product.id : null;
+            if (isEdit) {
+                const { error } = await supabase.from('productos').update({
+                    nombre, descripcion, foto_url, precio_usd, precio_cup
+                }).eq('id', product.id);
+                if (error) return alert('Error actualizar: ' + error.message);
+            } else {
+                const { data, error } = await supabase.from('productos').insert({
+                    nombre, descripcion, foto_url, precio_usd, precio_cup
+                }).select();
+                if (error) return alert('Error crear: ' + error.message);
+                productoId = data[0].id;
+            }
+            
+            const checkboxes = modalDiv.querySelectorAll('#deptCheckboxes input[type="checkbox"]');
+            const selectedDepts = Array.from(checkboxes).filter(cb => cb.checked).map(cb => parseInt(cb.value));
+            await supabase.from('producto_departamento').delete().eq('producto_id', productoId);
+            if (selectedDepts.length > 0) {
+                const relacionesInsert = selectedDepts.map(deptId => ({ producto_id: productoId, departamento_id: deptId }));
+                await supabase.from('producto_departamento').insert(relacionesInsert);
+            }
+            
+            modalDiv.remove();
+            await cargarDatosGlobales();
+            renderAdminPanel();
         };
-        loadTabContent();
+        cancelBtn.onclick = () => modalDiv.remove();
+    }
+    
+    function showDeptModal(dept = null) {
+        const isEdit = !!dept;
+        const nombreInicial = isEdit ? dept.nombre : '';
+        const nuevoNombre = prompt(`${isEdit ? 'Editar' : 'Nuevo'} departamento:`, nombreInicial);
+        if (!nuevoNombre || !nuevoNombre.trim()) return alert('El nombre no puede estar vacío');
+        (async () => {
+            if (isEdit) {
+                const { error } = await supabase.from('departamentos').update({ nombre: nuevoNombre.trim() }).eq('id', dept.id);
+                if (error) alert('Error: ' + error.message);
+            } else {
+                const { error } = await supabase.from('departamentos').insert({ nombre: nuevoNombre.trim() });
+                if (error) alert('Error: ' + error.message);
+            }
+            await cargarDatosGlobales();
+            renderAdminPanel();
+        })();
+    }
+    
+    function deleteDept(deptId, deptNombre) {
+        if (!confirm(`¿Eliminar "${deptNombre}"?`)) return;
+        (async () => {
+            const { error } = await supabase.from('departamentos').delete().eq('id', deptId);
+            if (error) alert('Error: ' + error.message);
+            else {
+                await cargarDatosGlobales();
+                renderAdminPanel();
+            }
+        })();
+    }
+    
+    function deleteProduct(prodId) {
+        if (!confirm('¿Eliminar producto? Se borrará completamente.')) return;
+        (async () => {
+            const { data: prod } = await supabase.from('productos').select('foto_url').eq('id', prodId).single();
+            if (prod?.foto_url) {
+                const fileName = prod.foto_url.split('/').pop();
+                if (fileName) await supabase.storage.from('productos').remove([fileName]).catch(console.error);
+            }
+            const { error } = await supabase.from('productos').delete().eq('id', prodId);
+            if (error) alert('Error: ' + error.message);
+            else {
+                await cargarDatosGlobales();
+                renderAdminPanel();
+            }
+        })();
     }
     
     function escapeHtml(str) {
