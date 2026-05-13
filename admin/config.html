@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - Configuración</title>
+    <title>Admin - Configuraci&oacute;n</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="admin.css">
     <style>
@@ -26,25 +26,24 @@
     <div class="navbar">
         <a href="productos.html">Productos</a>
         <a href="departamentos.html">Departamentos</a>
-        <a href="config.html">Configuración</a>
-        <button class="logout-btn" id="logoutBtn">Cerrar sesión</button>
+        <a href="config.html">Configuraci&oacute;n</a>
+        <button class="logout-btn" id="logoutBtn">Cerrar sesi&oacute;n</button>
     </div>
 
     <div class="container">
         <div class="card">
-            <h2>Configuración general</h2>
+            <h2>Configuraci&oacute;n general</h2>
             <div id="configMessage"></div>
             
-            <!-- Muestra el número actual guardado -->
             <div class="current-number" id="currentNumberDisplay">
-                ?? Número actual: <span id="currentNumberSpan">---</span>
+                ?? N&uacute;mero actual: <span id="currentNumberSpan">---</span>
             </div>
             
             <div class="form-group">
-                <label>Nuevo número de WhatsApp (código país sin '+', ejemplo: 521234567890)</label>
+                <label>Nuevo n&uacute;mero de WhatsApp (c&oacute;digo pa&iacute;s sin '+', ejemplo: 521234567890)</label>
                 <input type="text" id="whatsappNum" placeholder="521234567890">
             </div>
-            <button id="saveWspBtn">Guardar número</button>
+            <button id="saveWspBtn">Guardar n&uacute;mero</button>
         </div>
     </div>
 
@@ -68,8 +67,8 @@
                 .maybeSingle();
             
             if (error) {
-                console.error('Error cargando configuración:', error);
-                document.getElementById('configMessage').innerHTML = '<div class="message error">Error al cargar configuración</div>';
+                console.error('Error cargando configuraci&oacute;n:', error);
+                document.getElementById('configMessage').innerHTML = '<div class="message error">Error al cargar configuraci&oacute;n</div>';
                 return;
             }
             
@@ -82,7 +81,7 @@
         async function guardarConfiguracion() {
             const nuevoNumero = document.getElementById('whatsappNum').value.trim();
             if (!nuevoNumero) {
-                document.getElementById('configMessage').innerHTML = '<div class="message error">Debe escribir un número</div>';
+                document.getElementById('configMessage').innerHTML = '<div class="message error">Debe escribir un n&uacute;mero</div>';
                 return;
             }
             
@@ -95,12 +94,10 @@
                 console.error('Error guardando:', error);
                 document.getElementById('configMessage').innerHTML = `<div class="message error">Error al guardar: ${error.message}</div>`;
             } else {
-                document.getElementById('configMessage').innerHTML = '<div class="message success">Número guardado correctamente</div>';
-                // Actualizar la visualización
+                document.getElementById('configMessage').innerHTML = '<div class="message success">N&uacute;mero guardado correctamente</div>';
                 document.getElementById('currentNumberSpan').innerText = nuevoNumero;
                 document.getElementById('whatsappNum').value = '';
                 document.getElementById('whatsappNum').placeholder = `Ejemplo: ${nuevoNumero}`;
-                // Limpiar mensaje después de 3 segundos
                 setTimeout(() => {
                     const msgDiv = document.getElementById('configMessage');
                     if (msgDiv) msgDiv.innerHTML = '';
