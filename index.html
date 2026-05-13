@@ -14,54 +14,202 @@
         .cart-icon:hover { background: #e2e8f0; }
         .cart-icon span:first-child { font-size: 1.4rem; }
         .cart-count { background: #3b82f6; color: white; border-radius: 30px; padding: 2px 8px; font-size: 0.75rem; font-weight: bold; }
-        .cart-panel { position: fixed; top: 0; right: -100%; width: 100%; max-width: 420px; height: 100%; background: white; box-shadow: -4px 0 20px rgba(0,0,0,0.1); z-index: 1000; transition: right 0.3s ease; display: flex; flex-direction: column; }
-        .cart-panel.open { right: 0; }
-        .cart-header { display: flex; justify-content: space-between; align-items: center; padding: 20px; border-bottom: 1px solid #e2e8f0; }
+        
+        /* Carrito tipo burbuja (modal centrado) */
+        .cart-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .cart-overlay.active {
+            display: flex;
+        }
+        .cart-panel {
+            background: white;
+            width: 90%;
+            max-width: 500px;
+            max-height: 85vh;
+            border-radius: 28px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 30px -10px rgba(0,0,0,0.2);
+            transform: scale(0.9);
+            opacity: 0;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+        }
+        .cart-overlay.active .cart-panel {
+            transform: scale(1);
+            opacity: 1;
+        }
+        .cart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid #e2e8f0;
+            background: white;
+        }
         .cart-header h2 { font-size: 1.3rem; }
-        .close-cart { background: none; border: none; font-size: 1.8rem; cursor: pointer; color: #64748b; }
-        .cart-items { flex: 1; overflow-y: auto; padding: 16px; }
-        .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #e2e8f0; gap: 8px; flex-wrap: wrap; }
+        .close-cart {
+            background: none;
+            border: none;
+            font-size: 1.8rem;
+            cursor: pointer;
+            color: #64748b;
+            line-height: 1;
+        }
+        .cart-items {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+        .cart-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #e2e8f0;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
         .cart-item-info { flex: 2; }
         .cart-item-name { font-weight: 500; }
         .cart-item-price { font-size: 0.85rem; color: #475569; }
         .cart-item-actions { display: flex; align-items: center; gap: 8px; }
-        .cart-item-actions button { background: #f1f5f9; border: none; width: 28px; height: 28px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 1rem; }
+        .cart-item-actions button {
+            background: #f1f5f9;
+            border: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 1rem;
+        }
         .cart-item-actions span { min-width: 24px; text-align: center; }
-        .cart-total { padding: 16px 20px; border-top: 2px solid #e2e8f0; background: #f8fafc; font-weight: bold; font-size: 1.2rem; display: flex; justify-content: space-between; }
-        .cart-buttons { padding: 16px 20px 24px; display: flex; flex-direction: column; gap: 10px; }
-        .btn-whatsapp { background: #25D366; color: white; border: none; padding: 14px; border-radius: 40px; font-weight: bold; font-size: 1rem; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .cart-total {
+            padding: 16px 20px;
+            border-top: 2px solid #e2e8f0;
+            background: #f8fafc;
+            font-weight: bold;
+            font-size: 1.2rem;
+            display: flex;
+            justify-content: space-between;
+        }
+        .cart-buttons {
+            padding: 16px 20px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .btn-whatsapp {
+            background: #25D366;
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 40px;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
         .btn-whatsapp:hover { background: #128C7E; }
-        .btn-secondary { background: #e2e8f0; color: #1e293b; border: none; padding: 10px; border-radius: 40px; cursor: pointer; }
-        .departamentos { display: flex; flex-wrap: wrap; gap: 8px; padding: 16px 20px; background: white; border-bottom: 1px solid #e2e8f0; position: sticky; top: 76px; z-index: 90; }
-        .dept-btn { background: #f1f5f9; border: none; padding: 8px 16px; border-radius: 40px; cursor: pointer; transition: 0.2s; font-size: 0.85rem; }
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #1e293b;
+            border: none;
+            padding: 10px;
+            border-radius: 40px;
+            cursor: pointer;
+        }
+        /* Departamentos */
+        .departamentos {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 16px 20px;
+            background: white;
+            border-bottom: 1px solid #e2e8f0;
+            position: sticky;
+            top: 76px;
+            z-index: 90;
+        }
+        .dept-btn {
+            background: #f1f5f9;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 0.85rem;
+        }
         .dept-btn.active { background: #3b82f6; color: white; }
-        .productos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; padding: 24px 20px; }
-        .product-card { background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); transition: transform 0.1s, box-shadow 0.2s; display: flex; flex-direction: column; }
+        /* Grid productos */
+        .productos-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 20px;
+            padding: 24px 20px;
+        }
+        .product-card {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+            transition: transform 0.1s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+        }
         .product-card:hover { transform: translateY(-4px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
-        .product-img { width: 100%; height: 180px; object-fit: cover; background: #f1f5f9; }
+        .product-img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            background: #f1f5f9;
+        }
         .product-info { padding: 16px; flex: 1; display: flex; flex-direction: column; gap: 8px; }
         .product-name { font-weight: 600; font-size: 1.05rem; }
         .product-price { font-size: 1.3rem; font-weight: bold; color: #0f172a; }
-        .add-btn { background: #3b82f6; color: white; border: none; padding: 10px; border-radius: 40px; font-weight: bold; cursor: pointer; margin-top: 8px; transition: background 0.2s; }
+        .add-btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: background 0.2s;
+        }
         .add-btn:hover { background: #2563eb; }
         .empty-message { text-align: center; padding: 60px 20px; color: #64748b; }
-        .cart-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 999; display: none; }
-        .cart-overlay.active { display: block; }
+        /* Responsive */
         @media (max-width: 640px) {
             .productos-grid { grid-template-columns: 1fr 1fr; gap: 12px; padding: 16px; }
             .product-img { height: 140px; }
             .product-name { font-size: 0.9rem; }
             .product-price { font-size: 1.1rem; }
             .departamentos { top: 68px; padding: 12px 16px; }
+            .cart-panel { max-width: 95%; max-height: 80vh; }
         }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <div class="logo">
-        <h1>🛒 Mi Tienda (CUP)</h1>
-    </div>
+    <div class="logo"><h1>🛒 Mi Tienda (CUP)</h1></div>
     <div class="cart-icon" id="cartIcon">
         <span>🛍️</span>
         <span class="cart-count" id="cartCount">0</span>
@@ -76,29 +224,28 @@
     <div class="empty-message">Cargando productos...</div>
 </div>
 
-<div class="cart-overlay" id="cartOverlay"></div>
-<div class="cart-panel" id="cartPanel">
-    <div class="cart-header">
-        <h2>Tu pedido</h2>
-        <button class="close-cart" id="closeCartBtn">&times;</button>
-    </div>
-    <div class="cart-items" id="cartItemsList"></div>
-    <div class="cart-total">
-        <span>Total:</span>
-        <span id="cartTotal">0.00 CUP</span>
-    </div>
-    <div class="cart-buttons">
-        <button class="btn-whatsapp" id="whatsappOrderBtn">📲 Pedir por WhatsApp</button>
-        <button class="btn-secondary" id="clearCartBtn">Vaciar carrito</button>
+<!-- Overlay y cart modal (burbuja) -->
+<div class="cart-overlay" id="cartOverlay">
+    <div class="cart-panel" id="cartPanel">
+        <div class="cart-header">
+            <h2>Tu pedido</h2>
+            <button class="close-cart" id="closeCartBtn">&times;</button>
+        </div>
+        <div class="cart-items" id="cartItemsList"></div>
+        <div class="cart-total">
+            <span>Total:</span>
+            <span id="cartTotal">0.00 CUP</span>
+        </div>
+        <div class="cart-buttons">
+            <button class="btn-whatsapp" id="whatsappOrderBtn">📲 Pedir por WhatsApp</button>
+            <button class="btn-secondary" id="clearCartBtn">Vaciar carrito</button>
+        </div>
     </div>
 </div>
 
 <script>
-    // Configuración Supabase
     const SUPABASE_URL = 'https://hopssnvzzcwgromqsyyj.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhvcHNzbnZ6emN3Z3JvbXFzeXlqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2MTczNTcsImV4cCI6MjA5NDE5MzM1N30.jAgmJV_eq4MkWboMgqDMYbCF5Kjp3nhn21DQ7xsHGCM';
-
-    // Usamos un nombre único para el cliente
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     let productos = [];
@@ -108,12 +255,11 @@
     let carrito = [];
     let whatsappNumero = '521234567890';
 
-    // DOM elements
     const productosContainer = document.getElementById('productosContainer');
     const departamentosContainer = document.getElementById('departamentosContainer');
     const cartIcon = document.getElementById('cartIcon');
-    const cartPanel = document.getElementById('cartPanel');
     const cartOverlay = document.getElementById('cartOverlay');
+    const cartPanel = document.getElementById('cartPanel');
     const closeCartBtn = document.getElementById('closeCartBtn');
     const cartItemsList = document.getElementById('cartItemsList');
     const cartTotalSpan = document.getElementById('cartTotal');
@@ -123,7 +269,6 @@
 
     async function cargarDatos() {
         try {
-            // productos con precio CUP no nulo
             const { data: prods, error: errProds } = await supabaseClient
                 .from('productos')
                 .select('*')
@@ -190,12 +335,10 @@
                 return deptIds.includes(currentDept);
             });
         }
-
         if (filtrados.length === 0) {
             productosContainer.innerHTML = '<div class="empty-message">No hay productos en esta categoría.</div>';
             return;
         }
-
         productosContainer.innerHTML = filtrados.map(p => {
             const imgHtml = p.foto_url 
                 ? `<img class="product-img" src="${p.foto_url}" alt="${escapeHtml(p.nombre)}" onerror="this.src='https://placehold.co/400x200?text=Sin+imagen'">`
@@ -235,19 +378,17 @@
             });
         }
         actualizarCarritoUI();
-        abrirCarrito(); // opcional
+        abrirCarrito();
     }
 
     function actualizarCarritoUI() {
         const totalItems = carrito.reduce((sum, i) => sum + i.cantidad, 0);
         cartCountSpan.innerText = totalItems;
-
         if (carrito.length === 0) {
             cartItemsList.innerHTML = '<div style="text-align:center; padding:20px;">Carrito vacío</div>';
             cartTotalSpan.innerText = '0.00 CUP';
             return;
         }
-
         let html = '';
         let total = 0;
         carrito.forEach((item, idx) => {
@@ -318,17 +459,17 @@
     }
 
     function abrirCarrito() {
-        cartPanel.classList.add('open');
         cartOverlay.classList.add('active');
     }
     function cerrarCarrito() {
-        cartPanel.classList.remove('open');
         cartOverlay.classList.remove('active');
     }
 
     cartIcon.addEventListener('click', abrirCarrito);
     closeCartBtn.addEventListener('click', cerrarCarrito);
-    cartOverlay.addEventListener('click', cerrarCarrito);
+    cartOverlay.addEventListener('click', (e) => {
+        if (e.target === cartOverlay) cerrarCarrito();
+    });
     clearCartBtn.addEventListener('click', vaciarCarrito);
     whatsappOrderBtn.addEventListener('click', enviarPedidoWhatsApp);
 
