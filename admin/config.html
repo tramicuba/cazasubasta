@@ -7,18 +7,40 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="admin.css">
     <style>
+        .whatsapp-logo {
+            display: inline-block;
+            background: #25D366;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            text-align: center;
+            line-height: 24px;
+            font-size: 14px;
+            margin-right: 8px;
+        }
         .current-number {
             background: #e0f2fe;
-            border-radius: 8px;
-            padding: 10px;
-            margin-bottom: 20px;
-            font-size: 16px;
-            border-left: 4px solid #3b82f6;
+            border-radius: 12px;
+            padding: 12px 16px;
+            margin-bottom: 24px;
+            font-size: 0.95rem;
+            border-left: 4px solid #0284c7;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
         }
-        .current-number span {
+        .current-number span:first-child {
             font-weight: bold;
+        }
+        .current-number span:last-child {
+            font-weight: 700;
             font-family: monospace;
-            font-size: 18px;
+            font-size: 1.1rem;
+            background: white;
+            padding: 4px 8px;
+            border-radius: 8px;
         }
     </style>
 </head>
@@ -34,11 +56,11 @@
         <div class="card">
             <h2>Configuraci&oacute;n general</h2>
             <div id="configMessage"></div>
-            
             <div class="current-number" id="currentNumberDisplay">
-                ?? N&uacute;mero actual: <span id="currentNumberSpan">---</span>
+                <span class="whatsapp-logo">💬</span>
+                <span>WhatsApp:</span>
+                <span id="currentNumberSpan">---</span>
             </div>
-            
             <div class="form-group">
                 <label>Nuevo n&uacute;mero de WhatsApp (c&oacute;digo pa&iacute;s sin '+', ejemplo: 521234567890)</label>
                 <input type="text" id="whatsappNum" placeholder="521234567890">
@@ -65,13 +87,11 @@
                 .select('valor')
                 .eq('clave', 'whatsapp_numero')
                 .maybeSingle();
-            
             if (error) {
                 console.error('Error cargando configuraci&oacute;n:', error);
                 document.getElementById('configMessage').innerHTML = '<div class="message error">Error al cargar configuraci&oacute;n</div>';
                 return;
             }
-            
             const numeroActual = data?.valor || '521234567890';
             document.getElementById('currentNumberSpan').innerText = numeroActual;
             document.getElementById('whatsappNum').value = '';
@@ -84,12 +104,10 @@
                 document.getElementById('configMessage').innerHTML = '<div class="message error">Debe escribir un n&uacute;mero</div>';
                 return;
             }
-            
             const supabase = window.supabaseClient;
             const { error } = await supabase
                 .from('configuracion')
                 .upsert({ clave: 'whatsapp_numero', valor: nuevoNumero }, { onConflict: 'clave' });
-            
             if (error) {
                 console.error('Error guardando:', error);
                 document.getElementById('configMessage').innerHTML = `<div class="message error">Error al guardar: ${error.message}</div>`;
@@ -108,14 +126,11 @@
         document.getElementById('logoutBtn').addEventListener('click', async () => {
             await window.logout();
         });
-
         document.getElementById('saveWspBtn').addEventListener('click', guardarConfiguracion);
 
         (async () => {
             const ok = await verificarAuth();
-            if (ok) {
-                await cargarConfiguracion();
-            }
+            if (ok) await cargarConfiguracion();
         })();
     </script>
 </body>
