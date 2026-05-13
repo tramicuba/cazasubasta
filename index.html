@@ -10,12 +10,46 @@
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f8fafc; color: #0f172a; }
         .header { background: white; padding: 16px 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 100; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
         .logo h1 { font-size: 1.5rem; color: #1e293b; }
-        .cart-icon { position: relative; cursor: pointer; background: #f1f5f9; padding: 10px 16px; border-radius: 40px; display: flex; align-items: center; gap: 8px; transition: background 0.2s; }
-        .cart-icon:hover { background: #e2e8f0; }
-        .cart-icon span:first-child { font-size: 1.4rem; }
-        .cart-count { background: #3b82f6; color: white; border-radius: 30px; padding: 2px 8px; font-size: 0.75rem; font-weight: bold; }
         
-        /* Carrito tipo burbuja (modal centrado) */
+        /* Icono de carrito moderno */
+        .cart-icon {
+            position: relative;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f1f5f9;
+            width: 48px;
+            height: 48px;
+            border-radius: 30px;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+        .cart-icon:hover {
+            background: #e2e8f0;
+            transform: scale(1.02);
+        }
+        .cart-icon svg {
+            width: 26px;
+            height: 26px;
+            stroke: #1e293b;
+            stroke-width: 1.8;
+            fill: none;
+        }
+        .cart-count {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            background: #3b82f6;
+            color: white;
+            border-radius: 30px;
+            padding: 2px 7px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        /* Modal del carrito (burbuja) */
         .cart-overlay {
             position: fixed;
             top: 0;
@@ -203,6 +237,8 @@
             .product-price { font-size: 1.1rem; }
             .departamentos { top: 68px; padding: 12px 16px; }
             .cart-panel { max-width: 95%; max-height: 80vh; }
+            .cart-icon { width: 42px; height: 42px; }
+            .cart-icon svg { width: 22px; height: 22px; }
         }
     </style>
 </head>
@@ -211,7 +247,12 @@
 <div class="header">
     <div class="logo"><h1>🛒 Mi Tienda (CUP)</h1></div>
     <div class="cart-icon" id="cartIcon">
-        <span>🛍️</span>
+        <!-- Icono moderno de carrito (SVG) -->
+        <svg viewBox="0 0 24 24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="9" cy="21" r="1" fill="currentColor" stroke="none"/>
+            <circle cx="20" cy="21" r="1" fill="currentColor" stroke="none"/>
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+        </svg>
         <span class="cart-count" id="cartCount">0</span>
     </div>
 </div>
@@ -224,7 +265,7 @@
     <div class="empty-message">Cargando productos...</div>
 </div>
 
-<!-- Overlay y cart modal (burbuja) -->
+<!-- Overlay y cart modal -->
 <div class="cart-overlay" id="cartOverlay">
     <div class="cart-panel" id="cartPanel">
         <div class="cart-header">
@@ -378,7 +419,7 @@
             });
         }
         actualizarCarritoUI();
-        abrirCarrito();
+        // ELIMINADO: ya no se abre el carrito automáticamente
     }
 
     function actualizarCarritoUI() {
