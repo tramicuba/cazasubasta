@@ -6,6 +6,21 @@
     <title>Admin - Configuración</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="admin.css">
+    <style>
+        .current-number {
+            background: #e0f2fe;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 20px;
+            font-size: 16px;
+            border-left: 4px solid #3b82f6;
+        }
+        .current-number span {
+            font-weight: bold;
+            font-family: monospace;
+            font-size: 18px;
+        }
+    </style>
 </head>
 <body>
     <div class="navbar">
@@ -19,8 +34,14 @@
         <div class="card">
             <h2>Configuración general</h2>
             <div id="configMessage"></div>
+            
+            <!-- Muestra el número actual guardado -->
+            <div class="current-number" id="currentNumberDisplay">
+                ?? Número actual: <span id="currentNumberSpan">---</span>
+            </div>
+            
             <div class="form-group">
-                <label>Número de WhatsApp para pedidos (código país sin '+', ejemplo: 521234567890)</label>
+                <label>Nuevo número de WhatsApp (código país sin '+', ejemplo: 521234567890)</label>
                 <input type="text" id="whatsappNum" placeholder="521234567890">
             </div>
             <button id="saveWspBtn">Guardar número</button>
@@ -29,8 +50,6 @@
 
     <script src="auth.js"></script>
     <script>
-        let whatsappNumero = '';
-
         async function verificarAuth() {
             const user = await window.checkAuth();
             if (!user) {
@@ -46,7 +65,7 @@
                 .from('configuracion')
                 .select('valor')
                 .eq('clave', 'whatsapp_numero')
-                .maybeSingle(); // .single() puede dar error si no hay fila, .maybeSingle() devuelve null
+                .maybeSingle();
             
             if (error) {
                 console.error('Error cargando configuración:', error);
@@ -54,19 +73,20 @@
                 return;
             }
             
-            whatsappNumero = data?.valor || '521234567890';
-            document.getElementById('whatsappNum').value = whatsappNumero;
+            const numeroActual = data?.valor || '521234567890';
+            document.getElementById('currentNumberSpan').innerText = numeroActual;
+            document.getElementById('whatsappNum').value = '';
+            document.getElementById('whatsappNum').placeholder = `Ejemplo: ${numeroActual}`;
         }
 
         async function guardarConfiguracion() {
             const nuevoNumero = document.getElementById('whatsappNum').value.trim();
             if (!nuevoNumero) {
-                document.getElementById('configMessage').innerHTML = '<div class="message error">El número no puede estar vacío</div>';
+                document.getElementById('configMessage').innerHTML = '<div class="message error">Debe escribir un número</div>';
                 return;
             }
             
             const supabase = window.supabaseClient;
-            // Usar upsert con onConflict
             const { error } = await supabase
                 .from('configuracion')
                 .upsert({ clave: 'whatsapp_numero', valor: nuevoNumero }, { onConflict: 'clave' });
@@ -76,7 +96,15 @@
                 document.getElementById('configMessage').innerHTML = `<div class="message error">Error al guardar: ${error.message}</div>`;
             } else {
                 document.getElementById('configMessage').innerHTML = '<div class="message success">Número guardado correctamente</div>';
-                whatsappNumero = nuevoNumero;
+                // Actualizar la visualización
+                document.getElementById('currentNumberSpan').innerText = nuevoNumero;
+                document.getElementById('whatsappNum').value = '';
+                document.getElementById('whatsappNum').placeholder = `Ejemplo: ${nuevoNumero}`;
+                // Limpiar mensaje después de 3 segundos
+                setTimeout(() => {
+                    const msgDiv = document.getElementById('configMessage');
+                    if (msgDiv) msgDiv.innerHTML = '';
+                }, 3000);
             }
         }
 
