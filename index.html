@@ -25,17 +25,8 @@
             transition: all 0.2s ease;
             box-shadow: 0 2px 6px rgba(0,0,0,0.05);
         }
-        .cart-icon:hover {
-            background: #e2e8f0;
-            transform: scale(1.02);
-        }
-        .cart-icon svg {
-            width: 26px;
-            height: 26px;
-            stroke: #1e293b;
-            stroke-width: 1.8;
-            fill: none;
-        }
+        .cart-icon:hover { background: #e2e8f0; transform: scale(1.02); }
+        .cart-icon svg { width: 26px; height: 26px; stroke: #1e293b; stroke-width: 1.8; fill: none; }
         .cart-count {
             position: absolute;
             top: -6px;
@@ -62,9 +53,7 @@
             align-items: center;
             justify-content: center;
         }
-        .cart-overlay.active {
-            display: flex;
-        }
+        .cart-overlay.active { display: flex; }
         .cart-panel {
             background: white;
             width: 90%;
@@ -79,10 +68,7 @@
             opacity: 0;
             transition: transform 0.2s ease, opacity 0.2s ease;
         }
-        .cart-overlay.active .cart-panel {
-            transform: scale(1);
-            opacity: 1;
-        }
+        .cart-overlay.active .cart-panel { transform: scale(1); opacity: 1; }
         .cart-header {
             display: flex;
             justify-content: space-between;
@@ -100,11 +86,7 @@
             color: #64748b;
             line-height: 1;
         }
-        .cart-items {
-            flex: 1;
-            overflow-y: auto;
-            padding: 16px;
-        }
+        .cart-items { flex: 1; overflow-y: auto; padding: 16px; }
         .cart-item {
             display: flex;
             justify-content: space-between;
@@ -138,12 +120,7 @@
             display: flex;
             justify-content: space-between;
         }
-        .cart-buttons {
-            padding: 16px 20px 24px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
+        .cart-buttons { padding: 16px 20px 24px; display: flex; flex-direction: column; gap: 10px; }
         .btn-whatsapp {
             background: #25D366;
             color: white;
@@ -160,14 +137,8 @@
             gap: 8px;
         }
         .btn-whatsapp:hover { background: #128C7E; }
-        .btn-secondary {
-            background: #e2e8f0;
-            color: #1e293b;
-            border: none;
-            padding: 10px;
-            border-radius: 40px;
-            cursor: pointer;
-        }
+        .btn-secondary { background: #e2e8f0; color: #1e293b; border: none; padding: 10px; border-radius: 40px; cursor: pointer; }
+        
         /* Departamentos */
         .departamentos {
             display: flex;
@@ -190,6 +161,7 @@
             font-size: 0.85rem;
         }
         .dept-btn.active { background: #3b82f6; color: white; }
+        
         /* Grid productos */
         .productos-grid {
             display: grid;
@@ -216,7 +188,7 @@
         .product-info { padding: 16px; flex: 1; display: flex; flex-direction: column; gap: 8px; }
         .product-name { font-weight: 600; font-size: 1.05rem; }
         .product-price { font-size: 1.3rem; font-weight: bold; color: #0f172a; }
-        .add-btn {
+        .add-btn, .details-btn {
             background: #3b82f6;
             color: white;
             border: none;
@@ -226,9 +198,78 @@
             cursor: pointer;
             margin-top: 8px;
             transition: background 0.2s;
+            text-align: center;
         }
         .add-btn:hover { background: #2563eb; }
+        .details-btn { background: #64748b; margin-top: 4px; }
+        .details-btn:hover { background: #475569; }
         .empty-message { text-align: center; padding: 60px 20px; color: #64748b; }
+        
+        /* Modal de detalles del producto */
+        .detail-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .detail-modal-overlay.active { display: flex; }
+        .detail-modal {
+            background: white;
+            width: 90%;
+            max-width: 550px;
+            max-height: 90vh;
+            border-radius: 24px;
+            overflow-y: auto;
+            padding: 24px;
+            position: relative;
+            animation: fadeInUp 0.2s ease;
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .detail-modal img {
+            width: 100%;
+            max-height: 300px;
+            object-fit: contain;
+            border-radius: 16px;
+            margin-bottom: 16px;
+            background: #f1f5f9;
+        }
+        .detail-modal h3 {
+            font-size: 1.4rem;
+            margin-bottom: 12px;
+        }
+        .detail-modal .detail-price {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #0f172a;
+            margin-bottom: 12px;
+        }
+        .detail-modal .detail-description {
+            font-size: 1rem;
+            color: #334155;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            margin-bottom: 20px;
+        }
+        .close-detail {
+            background: #e2e8f0;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 40px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+        }
+        .close-detail:hover { background: #cbd5e1; }
+        
         /* Responsive */
         @media (max-width: 640px) {
             .productos-grid { grid-template-columns: 1fr 1fr; gap: 12px; padding: 16px; }
@@ -236,9 +277,10 @@
             .product-name { font-size: 0.9rem; }
             .product-price { font-size: 1.1rem; }
             .departamentos { top: 68px; padding: 12px 16px; }
-            .cart-panel { max-width: 95%; max-height: 80vh; }
             .cart-icon { width: 42px; height: 42px; }
             .cart-icon svg { width: 22px; height: 22px; }
+            .detail-modal { padding: 16px; }
+            .detail-modal img { max-height: 200px; }
         }
     </style>
 </head>
@@ -247,7 +289,6 @@
 <div class="header">
     <div class="logo"><h1>🛒 Mi Tienda (CUP)</h1></div>
     <div class="cart-icon" id="cartIcon">
-        <!-- Icono moderno de carrito (SVG) -->
         <svg viewBox="0 0 24 24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="9" cy="21" r="1" fill="currentColor" stroke="none"/>
             <circle cx="20" cy="21" r="1" fill="currentColor" stroke="none"/>
@@ -265,7 +306,7 @@
     <div class="empty-message">Cargando productos...</div>
 </div>
 
-<!-- Overlay y cart modal -->
+<!-- Carrito modal -->
 <div class="cart-overlay" id="cartOverlay">
     <div class="cart-panel" id="cartPanel">
         <div class="cart-header">
@@ -281,6 +322,17 @@
             <button class="btn-whatsapp" id="whatsappOrderBtn">📲 Pedir por WhatsApp</button>
             <button class="btn-secondary" id="clearCartBtn">Vaciar carrito</button>
         </div>
+    </div>
+</div>
+
+<!-- Modal de detalles del producto (lupa) -->
+<div class="detail-modal-overlay" id="detailModalOverlay">
+    <div class="detail-modal" id="detailModal">
+        <img id="detailImg" src="" alt="">
+        <h3 id="detailName"></h3>
+        <div class="detail-price" id="detailPrice"></div>
+        <div class="detail-description" id="detailDesc"></div>
+        <button class="close-detail" id="closeDetailBtn">Cerrar</button>
     </div>
 </div>
 
@@ -307,6 +359,12 @@
     const cartCountSpan = document.getElementById('cartCount');
     const whatsappOrderBtn = document.getElementById('whatsappOrderBtn');
     const clearCartBtn = document.getElementById('clearCartBtn');
+    const detailModalOverlay = document.getElementById('detailModalOverlay');
+    const detailImg = document.getElementById('detailImg');
+    const detailName = document.getElementById('detailName');
+    const detailPrice = document.getElementById('detailPrice');
+    const detailDesc = document.getElementById('detailDesc');
+    const closeDetailBtn = document.getElementById('closeDetailBtn');
 
     async function cargarDatos() {
         try {
@@ -356,7 +414,6 @@
             html += `<button class="dept-btn" data-id="${d.id}">${escapeHtml(d.nombre)}</button>`;
         });
         departamentosContainer.innerHTML = html;
-
         document.querySelectorAll('.dept-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.dept-btn').forEach(b => b.classList.remove('active'));
@@ -391,6 +448,7 @@
                         <div class="product-name">${escapeHtml(p.nombre)}</div>
                         <div class="product-price">${p.precio_cup.toFixed(2)} CUP</div>
                         <button class="add-btn" data-id="${p.id}">Añadir al carrito</button>
+                        <button class="details-btn" data-id="${p.id}">🔍 Detalles</button>
                     </div>
                 </div>
             `;
@@ -401,6 +459,13 @@
                 const prodId = parseInt(btn.dataset.id);
                 const producto = productos.find(p => p.id === prodId);
                 if (producto) añadirAlCarrito(producto);
+            });
+        });
+        document.querySelectorAll('.details-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const prodId = parseInt(btn.dataset.id);
+                const producto = productos.find(p => p.id === prodId);
+                if (producto) abrirModalDetalle(producto);
             });
         });
     }
@@ -419,7 +484,6 @@
             });
         }
         actualizarCarritoUI();
-        // ELIMINADO: ya no se abre el carrito automáticamente
     }
 
     function actualizarCarritoUI() {
@@ -499,20 +563,31 @@
         window.open(url, '_blank');
     }
 
-    function abrirCarrito() {
-        cartOverlay.classList.add('active');
+    function abrirCarrito() { cartOverlay.classList.add('active'); }
+    function cerrarCarrito() { cartOverlay.classList.remove('active'); }
+
+    function abrirModalDetalle(producto) {
+        detailImg.src = producto.foto_url || 'https://placehold.co/400x200?text=Sin+imagen';
+        detailName.innerText = producto.nombre;
+        detailPrice.innerText = `${producto.precio_cup.toFixed(2)} CUP`;
+        const desc = producto.descripcion && producto.descripcion.trim() !== '' 
+            ? producto.descripcion 
+            : 'Este producto no tiene descripción.';
+        detailDesc.innerText = desc;
+        detailModalOverlay.classList.add('active');
     }
-    function cerrarCarrito() {
-        cartOverlay.classList.remove('active');
+
+    function cerrarModalDetalle() {
+        detailModalOverlay.classList.remove('active');
     }
 
     cartIcon.addEventListener('click', abrirCarrito);
     closeCartBtn.addEventListener('click', cerrarCarrito);
-    cartOverlay.addEventListener('click', (e) => {
-        if (e.target === cartOverlay) cerrarCarrito();
-    });
+    cartOverlay.addEventListener('click', (e) => { if (e.target === cartOverlay) cerrarCarrito(); });
     clearCartBtn.addEventListener('click', vaciarCarrito);
     whatsappOrderBtn.addEventListener('click', enviarPedidoWhatsApp);
+    closeDetailBtn.addEventListener('click', cerrarModalDetalle);
+    detailModalOverlay.addEventListener('click', (e) => { if (e.target === detailModalOverlay) cerrarModalDetalle(); });
 
     function escapeHtml(str) {
         if (!str) return '';
