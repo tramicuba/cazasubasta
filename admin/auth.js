@@ -5,8 +5,19 @@
 
     window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+    // Verificar autenticación y redirigir si no hay sesión (para páginas protegidas)
     window.checkAuth = async function() {
         const { data: { user } } = await window.supabaseClient.auth.getUser();
+        if (!user) {
+            window.location.href = 'admin.html';
+            return null;
+        }
         return user;
+    };
+
+    // Cerrar sesión y redirigir al login
+    window.logout = async function() {
+        await window.supabaseClient.auth.signOut();
+        window.location.href = 'admin.html';
     };
 })();

@@ -21,9 +21,7 @@
                 <h2>Departamentos</h2>
                 <button id="newDeptBtn">+ Nuevo departamento</button>
             </div>
-            <div id="departamentosGrid" class="grid">
-                <!-- Los departamentos se cargar&aacute;n aqu&iacute; -->
-            </div>
+            <div id="departamentosGrid" class="grid"></div>
         </div>
     </div>
 
@@ -33,10 +31,7 @@
 
         async function verificarAuth() {
             const user = await window.checkAuth();
-            if (!user) {
-                window.location.href = 'admin.html';
-                return false;
-            }
+            if (!user) return false;
             return true;
         }
 

@@ -7,12 +7,25 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="admin.css">
     <style>
-        .search-bar {
-            margin-bottom: 20px;
-        }
-        .search-bar input {
+        .search-bar { margin-bottom: 20px; }
+        .search-bar input { width: 100%; max-width: 300px; }
+        .product-card img {
             width: 100%;
-            max-width: 300px;
+            height: 160px;
+            object-fit: cover;
+            border-radius: 12px;
+            background: #e5e7eb;
+            display: block;
+        }
+        .no-image {
+            height: 160px;
+            background: #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            color: #6b7280;
+            font-size: 14px;
         }
     </style>
 </head>
@@ -33,9 +46,7 @@
             <div class="search-bar">
                 <input type="text" id="searchInput" placeholder="Buscar por nombre...">
             </div>
-            <div id="productosGrid" class="grid">
-                <!-- Los productos se cargar&aacute;n aqu&iacute; din&aacute;micamente -->
-            </div>
+            <div id="productosGrid" class="grid"></div>
         </div>
     </div>
 
@@ -48,7 +59,6 @@
         async function verificarAuth() {
             const user = await window.checkAuth();
             if (!user) {
-                window.location.href = 'admin.html';
                 return false;
             }
             return true;
@@ -91,9 +101,12 @@
                     const dept = departamentos.find(d => d.id === did);
                     return dept ? dept.nombre : '';
                 }).filter(n => n).join(', ');
+                const imagenHtml = p.foto_url && p.foto_url.trim() !== '' 
+                    ? `<img src="${p.foto_url}" alt="${p.nombre}" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'no-image\'>Imagen no disponible</div>';">`
+                    : '<div class="no-image">Sin foto</div>';
                 return `
                     <div class="product-card" data-id="${p.id}">
-                        ${p.foto_url ? `<img src="${p.foto_url}" alt="${p.nombre}">` : '<div style="height:150px; background:#e5e7eb; display:flex; align-items:center; justify-content:center">Sin foto</div>'}
+                        ${imagenHtml}
                         <h3>${escapeHtml(p.nombre)}</h3>
                         <p><small>${p.descripcion ? escapeHtml(p.descripcion.substring(0,80)) : 'Sin descripci&oacute;n'}</small></p>
                         <p><strong>USD:</strong> ${p.precio_usd !== null ? '$'+p.precio_usd : 'No'}</p>
@@ -115,10 +128,26 @@
             });
         }
 
-        function abrirModalProducto(productoId = null) {
+        async function eliminarImagenStorage(url) {
+            if (!url) return;
+            try {
+                const fileName = url.split('/').pop();
+                if (fileName && fileName.includes('.')) {
+                    const { error } = await window.supabaseClient.storage.from('productos').remove([fileName]);
+                    if (error) console.error('Error eliminando imagen del storage:', error);
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        async function abrirModalProducto(productoId = null) {
             const esEdicion = productoId !== null;
             let producto = null;
-            if (esEdicion) producto = productos.find(p => p.id === productoId);
+            let imagenAnteriorUrl = null;
+            if (esEdicion) {
+                producto = productos.find(p => p.id === productoId);
+                if (!producto) return;
+                imagenAnteriorUrl = producto.foto_url;
+            }
             const overlay = document.createElement('div');
             overlay.className = 'modal-overlay';
             const deptCheckboxes = departamentos.map(d => {
@@ -174,7 +203,9 @@
                 const precioUsd = overlay.querySelector('#prodUsd').value;
                 const precioCup = overlay.querySelector('#prodCup').value;
                 let foto_url = urlInput.value.trim() || null;
+
                 if (fileInput.files.length > 0) {
+                    if (esEdicion && imagenAnteriorUrl) await eliminarImagenStorage(imagenAnteriorUrl);
                     const file = fileInput.files[0];
                     const fileExt = file.name.split('.').pop();
                     const fileName = `${Date.now()}.${fileExt}`;
@@ -182,18 +213,26 @@
                     if (uploadError) { alert('Error al subir imagen: ' + uploadError.message); return; }
                     const { data: { publicUrl } } = window.supabaseClient.storage.from('productos').getPublicUrl(fileName);
                     foto_url = publicUrl;
+                } else if (esEdicion && !foto_url && imagenAnteriorUrl) {
+                    await eliminarImagenStorage(imagenAnteriorUrl);
                 }
+
                 const precio_usd = precioUsd === '' ? null : parseFloat(precioUsd);
                 const precio_cup = precioCup === '' ? null : parseFloat(precioCup);
                 let nuevoId = productoId;
                 if (esEdicion) {
-                    const { error } = await window.supabaseClient.from('productos').update({ nombre, descripcion, foto_url, precio_usd, precio_cup }).eq('id', productoId);
+                    const { error } = await window.supabaseClient.from('productos').update({
+                        nombre, descripcion, foto_url, precio_usd, precio_cup
+                    }).eq('id', productoId);
                     if (error) return alert('Error al actualizar: ' + error.message);
                 } else {
-                    const { data, error } = await window.supabaseClient.from('productos').insert({ nombre, descripcion, foto_url, precio_usd, precio_cup }).select();
+                    const { data, error } = await window.supabaseClient.from('productos').insert({
+                        nombre, descripcion, foto_url, precio_usd, precio_cup
+                    }).select();
                     if (error) return alert('Error al crear: ' + error.message);
                     nuevoId = data[0].id;
                 }
+
                 const checkboxes = overlay.querySelectorAll('#deptCheckboxes input[type="checkbox"]');
                 const selectedDepts = Array.from(checkboxes).filter(cb => cb.checked).map(cb => parseInt(cb.value));
                 await window.supabaseClient.from('producto_departamento').delete().eq('producto_id', nuevoId);
@@ -208,12 +247,9 @@
         }
 
         async function eliminarProducto(productoId) {
-            if (!confirm('¿Eliminar este producto? Se borrar&aacute; permanentemente.')) return;
+            if (!confirm('¿Eliminar este producto? Se borrar&aacute; permanentemente la imagen y los datos.')) return;
             const producto = productos.find(p => p.id === productoId);
-            if (producto && producto.foto_url) {
-                const fileName = producto.foto_url.split('/').pop();
-                if (fileName) await window.supabaseClient.storage.from('productos').remove([fileName]).catch(console.error);
-            }
+            if (producto && producto.foto_url) await eliminarImagenStorage(producto.foto_url);
             const { error } = await window.supabaseClient.from('productos').delete().eq('id', productoId);
             if (error) alert('Error al eliminar: ' + error.message);
             else await cargarDatos();

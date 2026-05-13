@@ -73,10 +73,7 @@
     <script>
         async function verificarAuth() {
             const user = await window.checkAuth();
-            if (!user) {
-                window.location.href = 'admin.html';
-                return false;
-            }
+            if (!user) return false;
             return true;
         }
 
@@ -123,14 +120,11 @@
             }
         }
 
-        document.getElementById('logoutBtn').addEventListener('click', async () => {
-            await window.logout();
-        });
+        document.getElementById('logoutBtn').addEventListener('click', async () => { await window.logout(); });
         document.getElementById('saveWspBtn').addEventListener('click', guardarConfiguracion);
 
         (async () => {
-            const ok = await verificarAuth();
-            if (ok) await cargarConfiguracion();
+            if (await verificarAuth()) await cargarConfiguracion();
         })();
     </script>
 </body>
