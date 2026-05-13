@@ -26,25 +26,30 @@
 
     <script src="auth.js"></script>
     <script>
-        // Esperar a que el DOM esté listo
+        // Mostrar el formulario inmediatamente
         document.addEventListener('DOMContentLoaded', function() {
-            // Si ya está autenticado, redirigir a productos
-            window.checkAuth().then(user => {
-                if (user) {
-                    window.location.href = 'productos.html';
-                }
-            });
+            // No redirigimos automáticamente, solo verificamos para saber si el usuario ya está logueado
+            if (window.checkAuth) {
+                window.checkAuth().then(user => {
+                    if (user) {
+                        // Si ya está logueado, lo enviamos a productos
+                        window.location.href = 'productos.html';
+                    }
+                }).catch(console.error);
+            }
 
-            // Manejar el login
             const loginBtn = document.getElementById('loginBtn');
             if (loginBtn) {
                 loginBtn.addEventListener('click', async function() {
                     const email = document.getElementById('email').value;
                     const password = document.getElementById('password').value;
+                    if (!window.supabaseClient) {
+                        document.getElementById('loginMessage').innerHTML = '<div class="message error">Cliente Supabase no listo, recarga la página</div>';
+                        return;
+                    }
                     const { error } = await window.supabaseClient.auth.signInWithPassword({ email, password });
-                    const msgDiv = document.getElementById('loginMessage');
                     if (error) {
-                        msgDiv.innerHTML = '<div class="message error">' + error.message + '</div>';
+                        document.getElementById('loginMessage').innerHTML = '<div class="message error">' + error.message + '</div>';
                     } else {
                         window.location.href = 'productos.html';
                     }
