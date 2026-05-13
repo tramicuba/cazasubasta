@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Departamentos</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="admin.css">
+    <style>
+        /* Estilos adicionales si se necesitan */
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <a href="productos.html">Productos</a>
+        <a href="departamentos.html">Departamentos</a>
+        <a href="config.html">Configuración</a>
+        <button class="logout-btn" id="logoutBtn">Cerrar sesión</button>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <div class="flex-between">
+                <h2>Departamentos</h2>
+                <button id="newDeptBtn">+ Nuevo departamento</button>
+            </div>
+            <div id="departamentosGrid" class="grid">
+                <!-- Los departamentos se cargarán aquí dinámicamente -->
+            </div>
+        </div>
+    </div>
+
+    <script src="auth.js"></script>
+    <script>
+        let departamentos = [];
+
+        // Verificar autenticación
+        async function verificarAuth() {
+            const user = await window.checkAuth();
+            if (!user) {
+                window.location.href = 'admin.html';
+                return false;
+            }
+            return true;
+        }
+
+        // Cargar departamentos desde Supabase
+        async function cargarDepartamentos() {
+            const supabase = window.supabaseClient;
+            const { data, error } = await supabase.from('departamentos').select('*').order('nombre');
+            if (error) {
+                console.error('Error al cargar departamentos:', error);
+                return [];
+            }
+            departamentos = data || [];
+            renderizarDepartamentos();
+        }
+
+        // Renderizar tarjetas de departamentos
+        function renderizarDepartamentos() {
+            const grid = document.getElementById('departamentosGrid');
+            if (departamentos.length === 0) {
+                grid.innerHTML = '<div class="card">No hay departamentos. Crea uno nuevo.</div>';
+                return;
+            }
+
+            grid.innerHTML = departamentos.map(d => `
+                <div class="dept-card" data-id="${d.id}">
+                    <h3>${escapeHtml(d.nombre)}</h3>
+                    <div style="display:flex; gap:8px; margin-top:10px">
+                        <button class="editDeptBtn" data-id="${d.id}" data-nombre="${escapeHtml(d.nombre)}">?? Editar</button>
+                        <button class="deleteDeptBtn danger" data-id="${d.id}" data-nombre="${escapeHtml(d.nombre)}">?? Eliminar</button>
+                    </div>
+                </div>
+            `).join('');
+
+            // Eventos de edición
+            document.querySelectorAll('.editDeptBtn').forEach(btn => {
+                btn.addEventListener('click', () => editarDepartamento(parseInt(btn.dataset.id), btn.dataset.nombre));
+            });
+            // Eventos de eliminación
+            document.querySelectorAll('.deleteDeptBtn').forEach(btn => {
+                btn.addEventListener('click', () => eliminarDepartamento(parseInt(btn.dataset.id), btn.dataset.nombre));
+            });
+        }
+
+        // Crear nuevo departamento (prompt simple)
+        function nuevoDepartamento() {
+            const nombre = prompt('Nombre del nuevo departamento:');
+            if (!nombre || !nombre.trim()) return;
+            crearDepartamento(nombre.trim());
+        }
+
+        async function crearDepartamento(nombre) {
+            const supabase = window.supabaseClient;
+            const { error } = await supabase.from('departamentos').insert({ nombre });
+            if (error) {
+                alert('Error al crear: ' + error.message);
+            } else {
+                await cargarDepartamentos();
+            }
+        }
+
+        function editarDepartamento(id, nombreActual) {
+            const nuevoNombre = prompt('Editar nombre del departamento:', nombreActual);
+            if (!nuevoNombre || nuevoNombre.trim() === nombreActual) return;
+            actualizarDepartamento(id, nuevoNombre.trim());
+        }
+
+        async function actualizarDepartamento(id, nuevoNombre) {
+            const supabase = window.supabaseClient;
+            const { error } = await supabase.from('departamentos').update({ nombre: nuevoNombre }).eq('id', id);
+            if (error) {
+                alert('Error al actualizar: ' + error.message);
+            } else {
+                await cargarDepartamentos();
+            }
+        }
+
+        function eliminarDepartamento(id, nombre) {
+            if (!confirm(`¿Eliminar departamento "${nombre}"? Se perderán las relaciones con productos (no los productos).`)) return;
+            ejecutarEliminacion(id);
+        }
+
+        async function ejecutarEliminacion(id) {
+            const supabase = window.supabaseClient;
+            const { error } = await supabase.from('departamentos').delete().eq('id', id);
+            if (error) {
+                alert('Error al eliminar: ' + error.message);
+            } else {
+                await cargarDepartamentos();
+            }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+
+        // Cerrar sesión
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            await window.logout();
+        });
+
+        // Botón nuevo departamento
+        document.getElementById('newDeptBtn').addEventListener('click', nuevoDepartamento);
+
+        // Inicialización
+        (async () => {
+            const ok = await verificarAuth();
+            if (ok) {
+                await cargarDepartamentos();
+            }
+        })();
+    </script>
+</body>
+</html>
