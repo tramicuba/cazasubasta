@@ -3,287 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - Productos</title>
+    <title>Admin - Login</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="admin.css">
-    <style>
-        .search-bar { margin-bottom: 20px; }
-        .search-bar input { width: 100%; max-width: 300px; }
-        .product-card img { 
-            width: 100%; 
-            height: 160px; 
-            object-fit: cover; 
-            border-radius: 12px; 
-            background: #e5e7eb; 
-            display: block;
-        }
-        .no-image {
-            height: 160px;
-            background: #e5e7eb;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 12px;
-            color: #6b7280;
-            font-size: 14px;
-        }
-    </style>
 </head>
 <body>
-    <div class="navbar">
-        <a href="productos.html">Productos</a>
-        <a href="departamentos.html">Departamentos</a>
-        <a href="config.html">Configuraci&oacute;n</a>
-        <button class="logout-btn" id="logoutBtn">Cerrar sesi&oacute;n</button>
-    </div>
-
-    <div class="container">
+    <div class="container login-container">
         <div class="card">
-            <div class="flex-between">
-                <h2>Productos</h2>
-                <button id="newProductBtn">+ Nuevo producto</button>
+            <h2>Acceso Administrador</h2>
+            <div id="loginMessage"></div>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="email" placeholder="admin@tutienda.com">
             </div>
-            <div class="search-bar">
-                <input type="text" id="searchInput" placeholder="Buscar por nombre...">
+            <div class="form-group">
+                <label>Contrase&ntilde;a</label>
+                <input type="password" id="password" placeholder="••••••">
             </div>
-            <div id="productosGrid" class="grid"></div>
+            <button id="loginBtn" style="width:100%">Iniciar sesi&oacute;n</button>
         </div>
     </div>
-
     <script src="auth.js"></script>
     <script>
-        let productos = [];
-        let departamentos = [];
-        let relaciones = {};
-
-        async function verificarAuth() {
-            const user = await window.checkAuth();
-            if (!user) {
-                window.location.href = 'admin.html';
-                return false;
+        document.getElementById('loginBtn').onclick = async () => {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const { error } = await window.supabaseClient.auth.signInWithPassword({ email, password });
+            if (error) {
+                document.getElementById('loginMessage').innerHTML = `<div class="message error">${error.message}</div>`;
+            } else {
+                window.location.href = 'productos.html';
             }
-            return true;
-        }
-
-        async function cargarDatos() {
-            const supabase = window.supabaseClient;
-            const { data: prods, error: errProds } = await supabase.from('productos').select('*').order('id', { ascending: false });
-            if (errProds) console.error(errProds);
-            else productos = prods || [];
-
-            const { data: depts, error: errDepts } = await supabase.from('departamentos').select('*').order('nombre');
-            if (errDepts) console.error(errDepts);
-            else departamentos = depts || [];
-
-            const { data: rels, error: errRels } = await supabase.from('producto_departamento').select('*');
-            if (errRels) console.error(errRels);
-            else {
-                relaciones = {};
-                rels.forEach(r => {
-                    if (!relaciones[r.producto_id]) relaciones[r.producto_id] = [];
-                    relaciones[r.producto_id].push(r.departamento_id);
-                });
-            }
-            renderizarProductos();
-        }
-
-        function renderizarProductos() {
-            const grid = document.getElementById('productosGrid');
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            let productosFiltrados = productos.filter(p => p.nombre.toLowerCase().includes(searchTerm));
-
-            if (productosFiltrados.length === 0) {
-                grid.innerHTML = '<div class="card">No hay productos. Crea uno nuevo.</div>';
-                return;
-            }
-
-            grid.innerHTML = productosFiltrados.map(p => {
-                const deptNombres = (relaciones[p.id] || []).map(did => {
-                    const dept = departamentos.find(d => d.id === did);
-                    return dept ? dept.nombre : '';
-                }).filter(n => n).join(', ');
-                // Verificar si la URL de la foto es válida
-                const imagenHtml = p.foto_url && p.foto_url.trim() !== '' 
-                    ? `<img src="${p.foto_url}" alt="${p.nombre}" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'no-image\'>Imagen no disponible</div>';">`
-                    : '<div class="no-image">Sin foto</div>';
-                return `
-                    <div class="product-card" data-id="${p.id}">
-                        ${imagenHtml}
-                        <h3>${escapeHtml(p.nombre)}</h3>
-                        <p><small>${p.descripcion ? escapeHtml(p.descripcion.substring(0,80)) : 'Sin descripci&oacute;n'}</small></p>
-                        <p><strong>USD:</strong> ${p.precio_usd !== null ? '$'+p.precio_usd : 'No'}</p>
-                        <p><strong>CUP:</strong> ${p.precio_cup !== null ? p.precio_cup+' CUP' : 'No'}</p>
-                        <p><strong>Departamentos:</strong> ${deptNombres || 'Ninguno'}</p>
-                        <div style="display:flex; gap:8px; margin-top:10px">
-                            <button class="editProductBtn" data-id="${p.id}">✏️ Editar</button>
-                            <button class="deleteProductBtn danger" data-id="${p.id}">🗑 Eliminar</button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-
-            document.querySelectorAll('.editProductBtn').forEach(btn => {
-                btn.addEventListener('click', () => abrirModalProducto(parseInt(btn.dataset.id)));
-            });
-            document.querySelectorAll('.deleteProductBtn').forEach(btn => {
-                btn.addEventListener('click', () => eliminarProducto(parseInt(btn.dataset.id)));
-            });
-        }
-
-        // Función auxiliar para eliminar una imagen del storage por URL
-        async function eliminarImagenStorage(url) {
-            if (!url) return;
-            try {
-                const fileName = url.split('/').pop();
-                if (fileName && fileName.includes('.')) {
-                    const { error } = await window.supabaseClient.storage.from('productos').remove([fileName]);
-                    if (error) console.error('Error eliminando imagen del storage:', error);
-                    else console.log('Imagen eliminada:', fileName);
-                }
-            } catch (e) { console.error('Error al eliminar imagen:', e); }
-        }
-
-        async function abrirModalProducto(productoId = null) {
-            const esEdicion = productoId !== null;
-            let producto = null;
-            let imagenAnteriorUrl = null;
-            if (esEdicion) {
-                producto = productos.find(p => p.id === productoId);
-                if (!producto) return;
-                imagenAnteriorUrl = producto.foto_url;
-            }
-            const overlay = document.createElement('div');
-            overlay.className = 'modal-overlay';
-            const deptCheckboxes = departamentos.map(d => {
-                let checked = false;
-                if (esEdicion && relaciones[productoId] && relaciones[productoId].includes(d.id)) checked = true;
-                return `<label style="display:block"><input type="checkbox" value="${d.id}" ${checked ? 'checked' : ''}> ${escapeHtml(d.nombre)}</label>`;
-            }).join('');
-            overlay.innerHTML = `
-                <div class="modal-content">
-                    <h2>${esEdicion ? 'Editar producto' : 'Nuevo producto'}</h2>
-                    <div class="form-group">
-                        <label>Nombre *</label>
-                        <input type="text" id="prodNombre" value="${esEdicion ? escapeHtml(producto.nombre) : ''}">
-                    </div>
-                    <div class="form-group">
-                        <label>Descripci&oacute;n (opcional)</label>
-                        <textarea id="prodDesc" rows="3">${esEdicion && producto.descripcion ? escapeHtml(producto.descripcion) : ''}</textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>Precio USD (dejar vac&iacute;o si no aplica)</label>
-                        <input type="number" step="0.01" id="prodUsd" value="${esEdicion && producto.precio_usd !== null ? producto.precio_usd : ''}">
-                    </div>
-                    <div class="form-group">
-                        <label>Precio CUP (dejar vac&iacute;o si no aplica)</label>
-                        <input type="number" step="0.01" id="prodCup" value="${esEdicion && producto.precio_cup !== null ? producto.precio_cup : ''}">
-                    </div>
-                    <div class="form-group">
-                        <label>Foto (subir imagen)</label>
-                        <input type="file" id="prodFotoFile" accept="image/*">
-                        ${esEdicion && producto.foto_url ? `<div><img src="${producto.foto_url}" style="max-width:100px; margin-top:5px"><br><small>Imagen actual</small></div>` : ''}
-                        <input type="text" id="prodFotoUrl" placeholder="O pegar URL directa" style="margin-top:5px" value="${esEdicion && producto.foto_url ? producto.foto_url : ''}">
-                    </div>
-                    <div class="form-group">
-                        <label>Departamentos</label>
-                        <div id="deptCheckboxes">${deptCheckboxes}</div>
-                    </div>
-                    <div style="display:flex; gap:10px; margin-top:20px">
-                        <button id="modalGuardarBtn">Guardar</button>
-                        <button id="modalCancelarBtn" class="secondary">Cancelar</button>
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(overlay);
-            const guardarBtn = overlay.querySelector('#modalGuardarBtn');
-            const cancelarBtn = overlay.querySelector('#modalCancelarBtn');
-            const fileInput = overlay.querySelector('#prodFotoFile');
-            const urlInput = overlay.querySelector('#prodFotoUrl');
-
-            guardarBtn.onclick = async () => {
-                const nombre = overlay.querySelector('#prodNombre').value.trim();
-                if (!nombre) return alert('El nombre es obligatorio');
-                const descripcion = overlay.querySelector('#prodDesc').value;
-                const precioUsd = overlay.querySelector('#prodUsd').value;
-                const precioCup = overlay.querySelector('#prodCup').value;
-                let foto_url = urlInput.value.trim() || null;
-
-                let nuevaImagenSubida = false;
-                if (fileInput.files.length > 0) {
-                    // Si hay una imagen anterior, la eliminamos del storage
-                    if (esEdicion && imagenAnteriorUrl) {
-                        await eliminarImagenStorage(imagenAnteriorUrl);
-                    }
-                    const file = fileInput.files[0];
-                    const fileExt = file.name.split('.').pop();
-                    const fileName = `${Date.now()}.${fileExt}`;
-                    const { error: uploadError } = await window.supabaseClient.storage.from('productos').upload(fileName, file);
-                    if (uploadError) { alert('Error al subir imagen: ' + uploadError.message); return; }
-                    const { data: { publicUrl } } = window.supabaseClient.storage.from('productos').getPublicUrl(fileName);
-                    foto_url = publicUrl;
-                    nuevaImagenSubida = true;
-                } else if (esEdicion && !foto_url && imagenAnteriorUrl) {
-                    // Si se borró la URL manualmente, eliminar la imagen anterior
-                    await eliminarImagenStorage(imagenAnteriorUrl);
-                }
-
-                const precio_usd = precioUsd === '' ? null : parseFloat(precioUsd);
-                const precio_cup = precioCup === '' ? null : parseFloat(precioCup);
-                let nuevoId = productoId;
-                if (esEdicion) {
-                    const { error } = await window.supabaseClient.from('productos').update({
-                        nombre, descripcion, foto_url, precio_usd, precio_cup
-                    }).eq('id', productoId);
-                    if (error) return alert('Error al actualizar: ' + error.message);
-                } else {
-                    const { data, error } = await window.supabaseClient.from('productos').insert({
-                        nombre, descripcion, foto_url, precio_usd, precio_cup
-                    }).select();
-                    if (error) return alert('Error al crear: ' + error.message);
-                    nuevoId = data[0].id;
-                }
-
-                const checkboxes = overlay.querySelectorAll('#deptCheckboxes input[type="checkbox"]');
-                const selectedDepts = Array.from(checkboxes).filter(cb => cb.checked).map(cb => parseInt(cb.value));
-                await window.supabaseClient.from('producto_departamento').delete().eq('producto_id', nuevoId);
-                if (selectedDepts.length > 0) {
-                    const relacionesInsert = selectedDepts.map(deptId => ({ producto_id: nuevoId, departamento_id: deptId }));
-                    await window.supabaseClient.from('producto_departamento').insert(relacionesInsert);
-                }
-                overlay.remove();
-                await cargarDatos();
-            };
-            cancelarBtn.onclick = () => overlay.remove();
-        }
-
-        async function eliminarProducto(productoId) {
-            if (!confirm('¿Eliminar este producto? Se borrar&aacute; permanentemente la imagen y los datos.')) return;
-            const producto = productos.find(p => p.id === productoId);
-            if (producto && producto.foto_url) {
-                await eliminarImagenStorage(producto.foto_url);
-            }
-            const { error } = await window.supabaseClient.from('productos').delete().eq('id', productoId);
-            if (error) alert('Error al eliminar: ' + error.message);
-            else await cargarDatos();
-        }
-
-        function escapeHtml(str) {
-            if (!str) return '';
-            return str.replace(/[&<>]/g, m => {
-                if (m === '&') return '&amp;';
-                if (m === '<') return '&lt;';
-                if (m === '>') return '&gt;';
-                return m;
-            });
-        }
-
-        document.getElementById('logoutBtn').addEventListener('click', async () => { await window.logout(); });
-        document.getElementById('searchInput').addEventListener('input', () => renderizarProductos());
-        document.getElementById('newProductBtn').addEventListener('click', () => abrirModalProducto(null));
-
-        (async () => {
-            if (await verificarAuth()) await cargarDatos();
-        })();
+        };
     </script>
 </body>
 </html>
