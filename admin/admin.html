@@ -21,43 +21,21 @@
                 <input type="password" id="password" placeholder="••••••">
             </div>
             <button id="loginBtn" style="width:100%">Iniciar sesión</button>
-            <div id="userInfo" style="margin-top: 15px; font-size: 14px;"></div>
         </div>
     </div>
 
     <script src="auth.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Mostrar si ya hay sesión activa (opcional)
-            if (window.supabaseClient) {
-                window.supabaseClient.auth.getUser().then(({ data: { user } }) => {
-                    if (user) {
-                        document.getElementById('userInfo').innerHTML = `<div class="message info">Sesión activa como ${user.email}. <button id="logoutHereBtn" class="secondary">Cerrar sesión</button></div>`;
-                        document.getElementById('logoutHereBtn')?.addEventListener('click', () => {
-                            window.logout();
-                        });
-                    }
-                });
+        document.getElementById('loginBtn').onclick = async () => {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const { error } = await window.supabaseClient.auth.signInWithPassword({ email, password });
+            if (error) {
+                document.getElementById('loginMessage').innerHTML = `<div class="message error">${error.message}</div>`;
+            } else {
+                window.location.href = 'productos.html';
             }
-
-            const loginBtn = document.getElementById('loginBtn');
-            if (loginBtn) {
-                loginBtn.addEventListener('click', async function() {
-                    const email = document.getElementById('email').value;
-                    const password = document.getElementById('password').value;
-                    if (!window.supabaseClient) {
-                        document.getElementById('loginMessage').innerHTML = '<div class="message error">Cliente Supabase no listo, recarga la página</div>';
-                        return;
-                    }
-                    const { error } = await window.supabaseClient.auth.signInWithPassword({ email, password });
-                    if (error) {
-                        document.getElementById('loginMessage').innerHTML = '<div class="message error">' + error.message + '</div>';
-                    } else {
-                        window.location.href = 'productos.html';
-                    }
-                });
-            }
-        });
+        };
     </script>
 </body>
 </html>
