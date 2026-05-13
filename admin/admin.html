@@ -24,18 +24,18 @@
         </div>
     </div>
 
-    <script src="auth.js"></script>
-    <script>
-        document.getElementById('loginBtn').onclick = async () => {
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            const { error } = await supabase.auth.signInWithPassword({ email, password });
-            if (error) {
-                document.getElementById('loginMessage').innerHTML = `<div class="message error">${error.message}</div>`;
-            } else {
-                window.location.href = 'productos.html';
-            }
-        };
-    </script>
+   <script src="auth.js"></script>
+<script>
+    document.getElementById('loginBtn').onclick = async () => {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        if (error) {
+            document.getElementById('loginMessage').innerHTML = `<div class="message error">${error.message}</div>`;
+        } else {
+            window.location.href = 'productos.html';
+        }
+    };
+</script>
 </body>
 </html>
