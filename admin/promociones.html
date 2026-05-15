@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Promociones</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="admin.css">
+    <style>
+        .preview-img {
+            max-width: 80px;
+            max-height: 80px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+        .orden-input {
+            width: 60px;
+            text-align: center;
+        }
+        .activa-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: bold;
+        }
+        .activa-true {
+            background: #dcfce7;
+            color: #15803d;
+        }
+        .activa-false {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <a href="productos.html">Productos</a>
+        <a href="departamentos.html">Departamentos</a>
+        <a href="promociones.html">Promociones</a>
+        <a href="config.html">Configuraci&oacute;n</a>
+        <button class="logout-btn" id="logoutBtn">Cerrar sesi&oacute;n</button>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <div class="flex-between">
+                <h2>Promociones</h2>
+                <button id="newPromoBtn">+ Nueva promoci&oacute;n</button>
+            </div>
+            <div id="promocionesGrid" class="grid">
+                <!-- listado dinámico -->
+            </div>
+        </div>
+    </div>
+
+    <script src="auth.js"></script>
+    <script>
+        let promociones = [];
+
+        async function verificarAuth() {
+            const user = await window.checkAuth();
+            if (!user) return false;
+            return true;
+        }
+
+        async function cargarPromociones() {
+            const supabase = window.supabaseClient;
+            const { data, error } = await supabase
+                .from('promociones')
+                .select('*')
+                .order('orden', { ascending: true })
+                .order('id', { ascending: false });
+            if (error) {
+                console.error(error);
+                return;
+            }
+            promociones = data || [];
+            renderizarPromociones();
+        }
+
+        function renderizarPromociones() {
+            const grid = document.getElementById('promocionesGrid');
+            if (promociones.length === 0) {
+                grid.innerHTML = '<div class="card">No hay promociones. Crea una nueva.</div>';
+                return;
+            }
+            grid.innerHTML = promociones.map(promo => `
+                <div class="dept-card" style="padding: 12px;">
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        ${promo.imagen_url ? `<img src="${promo.imagen_url}" class="preview-img" alt="preview">` : '<div class="preview-img" style="background:#e5e7eb;">Sin imagen</div>'}
+                        <div style="flex:1">
+                            <div><strong>ID:</strong> ${promo.id}</div>
+                            <div><strong>Texto:</strong> ${escapeHtml(promo.texto || '(sin texto)')}</div>
+                            <div><strong>Link:</strong> ${promo.link ? escapeHtml(promo.link) : '(ninguno)'}</div>
+                            <div><strong>Orden:</strong> ${promo.orden}</div>
+                            <div><strong>Activa:</strong> <span class="activa-badge activa-${promo.activa}">${promo.activa ? 'Sí' : 'No'}</span></div>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 8px; margin-top: 12px; justify-content: flex-end;">
+                        <button class="editPromoBtn" data-id="${promo.id}">?? Editar</button>
+                        <button class="deletePromoBtn danger" data-id="${promo.id}">?? Eliminar</button>
+                    </div>
+                </div>
+            `).join('');
+
+            document.querySelectorAll('.editPromoBtn').forEach(btn => {
+                btn.addEventListener('click', () => abrirModalPromocion(parseInt(btn.dataset.id)));
+            });
+            document.querySelectorAll('.deletePromoBtn').forEach(btn => {
+                btn.addEventListener('click', () => eliminarPromocion(parseInt(btn.dataset.id)));
+            });
+        }
+
+        function abrirModalPromocion(promoId = null) {
+            const esEdicion = promoId !== null;
+            let promo = null;
+            if (esEdicion) promo = promociones.find(p => p.id === promoId);
+            
+            const overlay = document.createElement('div');
+            overlay.className = 'modal-overlay';
+            overlay.innerHTML = `
+                <div class="modal-content">
+                    <h2>${esEdicion ? 'Editar promoci&oacute;n' : 'Nueva promoci&oacute;n'}</h2>
+                    <div class="form-group">
+                        <label>Imagen (subir archivo)</label>
+                        <input type="file" id="promoImgFile" accept="image/*">
+                        ${esEdicion && promo.imagen_url ? `<div><img src="${promo.imagen_url}" style="max-width:100px; margin-top:5px"><br><small>Imagen actual</small></div>` : ''}
+                        <input type="text" id="promoImgUrl" placeholder="O pegar URL directa" style="margin-top:5px" value="${esEdicion && promo.imagen_url ? promo.imagen_url : ''}">
+                    </div>
+                    <div class="form-group">
+                        <label>Texto (opcional)</label>
+                        <input type="text" id="promoTexto" value="${esEdicion && promo.texto ? escapeHtml(promo.texto) : ''}">
+                    </div>
+                    <div class="form-group">
+                        <label>Link (opcional, URL a donde dirigir al hacer clic)</label>
+                        <input type="url" id="promoLink" value="${esEdicion && promo.link ? escapeHtml(promo.link) : ''}">
+                    </div>
+                    <div class="form-group">
+                        <label>Orden (menor n&uacute;mero = m&aacute;s arriba)</label>
+                        <input type="number" id="promoOrden" value="${esEdicion ? promo.orden : 0}">
+                    </div>
+                    <div class="form-group">
+                        <label>Activa</label>
+                        <select id="promoActiva">
+                            <option value="true" ${esEdicion && promo.activa ? 'selected' : ''}>Sí</option>
+                            <option value="false" ${esEdicion && !promo.activa ? 'selected' : ''}>No</option>
+                        </select>
+                    </div>
+                    <div style="display:flex; gap:10px; margin-top:20px">
+                        <button id="modalGuardarBtn">Guardar</button>
+                        <button id="modalCancelarBtn" class="secondary">Cancelar</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+
+            const guardarBtn = overlay.querySelector('#modalGuardarBtn');
+            const cancelarBtn = overlay.querySelector('#modalCancelarBtn');
+            const fileInput = overlay.querySelector('#promoImgFile');
+            const urlInput = overlay.querySelector('#promoImgUrl');
+
+            guardarBtn.onclick = async () => {
+                let imagen_url = urlInput.value.trim() || null;
+                // Subir archivo si se selecciona
+                if (fileInput.files.length > 0) {
+                    const file = fileInput.files[0];
+                    const fileExt = file.name.split('.').pop();
+                    const fileName = `promociones/${Date.now()}.${fileExt}`;
+                    const { error: uploadError } = await window.supabaseClient.storage.from('productos').upload(fileName, file);
+                    if (uploadError) {
+                        alert('Error al subir imagen: ' + uploadError.message);
+                        return;
+                    }
+                    const { data: { publicUrl } } = window.supabaseClient.storage.from('productos').getPublicUrl(fileName);
+                    imagen_url = publicUrl;
+                }
+                if (!imagen_url) {
+                    alert('Debe proporcionar una imagen (URL o archivo).');
+                    return;
+                }
+                const texto = overlay.querySelector('#promoTexto').value;
+                const link = overlay.querySelector('#promoLink').value;
+                const orden = parseInt(overlay.querySelector('#promoOrden').value);
+                const activa = overlay.querySelector('#promoActiva').value === 'true';
+
+                const supabase = window.supabaseClient;
+                if (esEdicion) {
+                    const { error } = await supabase
+                        .from('promociones')
+                        .update({ imagen_url, texto, link, orden, activa })
+                        .eq('id', promoId);
+                    if (error) alert('Error al actualizar: ' + error.message);
+                } else {
+                    const { error } = await supabase
+                        .from('promociones')
+                        .insert({ imagen_url, texto, link, orden, activa });
+                    if (error) alert('Error al crear: ' + error.message);
+                }
+                overlay.remove();
+                await cargarPromociones();
+            };
+            cancelarBtn.onclick = () => overlay.remove();
+        }
+
+        async function eliminarPromocion(id) {
+            if (!confirm('¿Eliminar esta promoción?')) return;
+            const supabase = window.supabaseClient;
+            const { error } = await supabase.from('promociones').delete().eq('id', id);
+            if (error) alert('Error al eliminar: ' + error.message);
+            else await cargarPromociones();
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, m => {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+
+        document.getElementById('logoutBtn').addEventListener('click', async () => { await window.logout(); });
+        document.getElementById('newPromoBtn').addEventListener('click', () => abrirModalPromocion(null));
+
+        (async () => {
+            if (await verificarAuth()) await cargarPromociones();
+        })();
+    </script>
+</body>
+</html>
