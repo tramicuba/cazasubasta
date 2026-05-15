@@ -2,804 +2,108 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>MercaMax - Tienda en CUP</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Departamentos</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f8fafc;
-            color: #0f172a;
-        }
-
-        /* Pantalla de bienvenida (logo grande) */
-        .hero {
-            width: 100%;
-            height: 100vh;
-            background-color: #EBF8DA;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-            will-change: height;
-        }
-        .hero-logo {
-            width: 80%;
-            max-width: 300px;
-            text-align: center;
-            transition: none;
-        }
-        .hero-logo img {
-            width: 100%;
-            height: auto;
-            display: block;
-        }
-
-        /* Header fijo */
-        .header {
-            background: #EBF8DA;
-            padding: 12px 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 12px;
-        }
-        .logo-container {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .small-logo {
-            width: 0;
-            overflow: hidden;
-            transition: width 0.3s ease;
-        }
-        .small-logo img {
-            height: 36px;
-            width: auto;
-            display: block;
-        }
-        .small-logo.visible {
-            width: 36px;
-        }
-        .logo-container h1 {
-            font-size: 1.5rem;
-            color: #1e293b;
-            white-space: nowrap;
-        }
-
-        /* ------ BANNER DE PROMOCIONES ------ */
-        .promo-container {
-            width: 100%;
-            background: #EBF8DA; /* mismo fondo para integrarse */
-            overflow: hidden;
-            position: relative;
-        }
-        .promo-slider {
-            position: relative;
-            width: 100%;
-            min-height: 160px;
-            background: #EBF8DA;
-        }
-        .promo-slide {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            opacity: 0;
-            transition: opacity 0.8s ease-in-out;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background-size: cover;
-            background-position: center center;
-            background-repeat: no-repeat;
-            min-height: 160px;
-        }
-        .promo-slide.active {
-            opacity: 1;
-            position: relative;
-        }
-        .promo-link {
-            display: block;
-            width: 100%;
-            height: 100%;
-            text-decoration: none;
-            color: inherit;
-        }
-        .promo-content {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            background: rgba(0,0,0,0.6);
-            color: white;
-            padding: 8px 16px;
-            border-radius: 30px;
-            font-size: 0.9rem;
-            max-width: 80%;
-            backdrop-filter: blur(4px);
-        }
-        .promo-dots {
-            display: flex;
-            justify-content: center;
-            gap: 12px;
-            padding: 8px 0;
-            background: #EBF8DA;
-        }
-        .dot {
-            width: 10px;
-            height: 10px;
-            background: #9ca3af;
-            border-radius: 50%;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        .dot.active {
-            background: #3b82f6;
-            width: 24px;
-            border-radius: 10px;
-        }
-        /* Ajuste para cuando no hay promociones: no mostrar nada */
-        .promo-container.empty {
-            display: none;
-        }
-
-        /* Resto de estilos (carrito, departamentos, productos, modales) - sin cambios */
-        .cart-icon {
-            position: relative;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #f1f5f9;
-            width: 48px;
-            height: 48px;
-            border-radius: 30px;
-            transition: all 0.2s ease;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-        }
-        .cart-icon:hover { background: #e2e8f0; transform: scale(1.02); }
-        .cart-icon svg { width: 26px; height: 26px; stroke: #1e293b; stroke-width: 1.8; fill: none; }
-        .cart-count {
-            position: absolute;
-            top: -6px;
-            right: -6px;
-            background: #3b82f6;
-            color: white;
-            border-radius: 30px;
-            padding: 2px 7px;
-            font-size: 0.7rem;
-            font-weight: bold;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .cart-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 999;
-            display: none;
-            align-items: center;
-            justify-content: center;
-        }
-        .cart-overlay.active { display: flex; }
-        .cart-panel {
-            background: white;
-            width: 90%;
-            max-width: 500px;
-            max-height: 85vh;
-            border-radius: 28px;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 20px 30px -10px rgba(0,0,0,0.2);
-            transform: scale(0.9);
-            opacity: 0;
-            transition: transform 0.2s ease, opacity 0.2s ease;
-        }
-        .cart-overlay.active .cart-panel { transform: scale(1); opacity: 1; }
-        .cart-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px;
-            border-bottom: 1px solid #e2e8f0;
-        }
-        .close-cart {
-            background: none;
-            border: none;
-            font-size: 1.8rem;
-            cursor: pointer;
-            color: #64748b;
-        }
-        .cart-items { flex: 1; overflow-y: auto; padding: 16px; }
-        .cart-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 0;
-            border-bottom: 1px solid #e2e8f0;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-        .cart-item-info { flex: 2; }
-        .cart-item-name { font-weight: 500; }
-        .cart-item-price { font-size: 0.85rem; color: #475569; }
-        .cart-item-actions { display: flex; gap: 8px; align-items: center; }
-        .cart-item-actions button {
-            background: #f1f5f9;
-            border: none;
-            width: 28px;
-            height: 28px;
-            border-radius: 20px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .cart-total {
-            padding: 16px 20px;
-            border-top: 2px solid #e2e8f0;
-            background: #f8fafc;
-            font-weight: bold;
-            font-size: 1.2rem;
-            display: flex;
-            justify-content: space-between;
-        }
-        .cart-buttons { padding: 16px 20px 24px; display: flex; flex-direction: column; gap: 10px; }
-        .btn-whatsapp {
-            background: #25D366;
-            color: white;
-            border: none;
-            padding: 14px;
-            border-radius: 40px;
-            font-weight: bold;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-        .btn-whatsapp:hover { background: #128C7E; }
-        .btn-secondary { background: #e2e8f0; border: none; padding: 10px; border-radius: 40px; cursor: pointer; }
-
-        .departamentos {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            padding: 16px 20px;
-            background: white;
-            border-bottom: 1px solid #e2e8f0;
-            position: sticky;
-            top: 76px;
-            z-index: 90;
-        }
-        .dept-btn {
-            background: #f1f5f9;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 40px;
-            cursor: pointer;
-            transition: 0.2s;
-            font-size: 0.85rem;
-        }
-        .dept-btn.active { background: #3b82f6; color: white; }
-
-        .productos-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-            gap: 20px;
-            padding: 24px 20px;
-        }
-        .product-card {
-            background: white;
-            border-radius: 20px;
-            overflow: hidden;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-            transition: transform 0.1s, box-shadow 0.2s;
-            display: flex;
-            flex-direction: column;
-        }
-        .product-card:hover { transform: translateY(-4px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
-        .product-img {
-            width: 100%;
-            height: 180px;
-            object-fit: cover;
-            background: #f1f5f9;
-        }
-        .product-info { padding: 16px; flex: 1; display: flex; flex-direction: column; gap: 8px; }
-        .product-name { font-weight: 600; font-size: 1.05rem; }
-        .product-price { font-size: 1.3rem; font-weight: bold; color: #0f172a; }
-        .add-btn, .details-btn {
-            background: #3b82f6;
-            color: white;
-            border: none;
-            padding: 10px;
-            border-radius: 40px;
-            font-weight: bold;
-            cursor: pointer;
-            text-align: center;
-        }
-        .add-btn:hover { background: #2563eb; }
-        .details-btn { background: #64748b; margin-top: 4px; }
-        .details-btn:hover { background: #475569; }
-        .empty-message { text-align: center; padding: 60px 20px; color: #64748b; }
-
-        .detail-modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.8);
-            z-index: 1100;
-            display: none;
-            align-items: center;
-            justify-content: center;
-        }
-        .detail-modal-overlay.active { display: flex; }
-        .detail-modal {
-            background: white;
-            width: 90%;
-            max-width: 550px;
-            max-height: 90vh;
-            border-radius: 24px;
-            overflow-y: auto;
-            padding: 24px;
-        }
-        .detail-modal img {
-            width: 100%;
-            max-height: 300px;
-            object-fit: contain;
-            border-radius: 16px;
-            margin-bottom: 16px;
-        }
-        .detail-modal h3 { font-size: 1.4rem; margin-bottom: 12px; }
-        .detail-price { font-size: 1.2rem; font-weight: bold; margin-bottom: 12px; }
-        .detail-description { font-size: 1rem; color: #334155; line-height: 1.5; margin-bottom: 20px; white-space: pre-wrap; }
-        .close-detail {
-            background: #e2e8f0;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 40px;
-            cursor: pointer;
-            width: 100%;
-        }
-
-        @media (max-width: 640px) {
-            .productos-grid { grid-template-columns: 1fr 1fr; gap: 12px; padding: 16px; }
-            .product-img { height: 140px; }
-            .product-name { font-size: 0.9rem; }
-            .product-price { font-size: 1.1rem; }
-            .departamentos { top: 68px; padding: 12px 16px; }
-            .cart-icon { width: 42px; height: 42px; }
-            .cart-icon svg { width: 22px; height: 22px; }
-            .promo-slider { min-height: 120px; }
-            .promo-content { font-size: 0.7rem; bottom: 8px; left: 8px; padding: 4px 10px; }
-        }
-    </style>
+    <link rel="stylesheet" href="admin.css">
 </head>
 <body>
-
-    <!-- Pantalla de bienvenida -->
-    <div id="hero" class="hero">
-        <div class="hero-logo" id="heroLogo">
-            <img src="https://hopssnvzzcwgromqsyyj.supabase.co/storage/v1/object/public/productos/Iconos/Logo.jpeg" alt="MercaMax">
-        </div>
+    <div class="navbar">
+        <a href="productos.html">Productos</a>
+        <a href="departamentos.html">Departamentos</a>
+		<a href="promociones.html">Promociones</a>
+        <a href="config.html">Configuraci&oacute;n</a>
+        <button class="logout-btn" id="logoutBtn">Cerrar sesi&oacute;n</button>
     </div>
 
-    <!-- Header -->
-    <div class="header" id="mainHeader">
-        <div class="logo-container">
-            <div class="small-logo" id="smallLogo">
-                <img src="https://hopssnvzzcwgromqsyyj.supabase.co/storage/v1/object/public/productos/Iconos/Logo.jpeg" alt="MercaMax">
+    <div class="container">
+        <div class="card">
+            <div class="flex-between">
+                <h2>Departamentos</h2>
+                <button id="newDeptBtn">+ Nuevo departamento</button>
             </div>
-            <h1>MercaMax</h1>
-        </div>
-        <div class="cart-icon" id="cartIcon">
-            <svg viewBox="0 0 24 24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="9" cy="21" r="1" fill="currentColor" stroke="none"/>
-                <circle cx="20" cy="21" r="1" fill="currentColor" stroke="none"/>
-                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-            </svg>
-            <span class="cart-count" id="cartCount">0</span>
+            <div id="departamentosGrid" class="grid"></div>
         </div>
     </div>
 
-    <!-- Contenedor de promociones (se llenará dinámicamente) -->
-    <div id="promoContainer" class="promo-container empty"></div>
-
-    <!-- Barra de departamentos -->
-    <div class="departamentos" id="departamentosContainer">
-        <button class="dept-btn active" data-id="all">Todos</button>
-    </div>
-
-    <!-- Productos -->
-    <div id="productosContainer" class="productos-grid">
-        <div class="empty-message">Cargando productos...</div>
-    </div>
-
-    <!-- Modales -->
-    <div class="cart-overlay" id="cartOverlay">
-        <div class="cart-panel">
-            <div class="cart-header">
-                <h2>Tu pedido</h2>
-                <button class="close-cart" id="closeCartBtn">&times;</button>
-            </div>
-            <div class="cart-items" id="cartItemsList"></div>
-            <div class="cart-total">
-                <span>Total:</span>
-                <span id="cartTotal">0.00 CUP</span>
-            </div>
-            <div class="cart-buttons">
-                <button class="btn-whatsapp" id="whatsappOrderBtn">📲 Pedir por WhatsApp</button>
-                <button class="btn-secondary" id="clearCartBtn">Vaciar carrito</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="detail-modal-overlay" id="detailModalOverlay">
-        <div class="detail-modal">
-            <img id="detailImg" src="" alt="">
-            <h3 id="detailName"></h3>
-            <div class="detail-price" id="detailPrice"></div>
-            <div class="detail-description" id="detailDesc"></div>
-            <button class="close-detail" id="closeDetailBtn">Cerrar</button>
-        </div>
-    </div>
-
+    <script src="auth.js"></script>
     <script>
-        // ---------- CONFIGURACIÓN SUPABASE ----------
-        const SUPABASE_URL = 'https://hopssnvzzcwgromqsyyj.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhvcHNzbnZ6emN3Z3JvbXFzeXlqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2MTczNTcsImV4cCI6MjA5NDE5MzM1N30.jAgmJV_eq4MkWboMgqDMYbCF5Kjp3nhn21DQ7xsHGCM';
-        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-        // ---------- ESTADO GLOBAL ----------
-        let productos = [];
         let departamentos = [];
-        let relaciones = {};
-        let currentDept = 'all';
-        let carrito = [];
-        let whatsappNumero = '521234567890';
-        let promociones = [];          // almacenar promociones activas
-        let carruselInterval = null;
-        let slideIndex = 0;
 
-        // ---------- ELEMENTOS DOM ----------
-        const productosContainer = document.getElementById('productosContainer');
-        const departamentosContainer = document.getElementById('departamentosContainer');
-        const cartIcon = document.getElementById('cartIcon');
-        const cartOverlay = document.getElementById('cartOverlay');
-        const closeCartBtn = document.getElementById('closeCartBtn');
-        const cartItemsList = document.getElementById('cartItemsList');
-        const cartTotalSpan = document.getElementById('cartTotal');
-        const cartCountSpan = document.getElementById('cartCount');
-        const whatsappOrderBtn = document.getElementById('whatsappOrderBtn');
-        const clearCartBtn = document.getElementById('clearCartBtn');
-        const detailModalOverlay = document.getElementById('detailModalOverlay');
-        const detailImg = document.getElementById('detailImg');
-        const detailName = document.getElementById('detailName');
-        const detailPrice = document.getElementById('detailPrice');
-        const detailDesc = document.getElementById('detailDesc');
-        const closeDetailBtn = document.getElementById('closeDetailBtn');
-        const promoContainer = document.getElementById('promoContainer');
-
-        // ---------- FUNCIONES DE PROMOCIONES ----------
-        async function cargarPromociones() {
-            const { data, error } = await supabaseClient
-                .from('promociones')
-                .select('*')
-                .eq('activa', true)
-                .order('orden', { ascending: true })
-                .order('id', { ascending: false });
-            if (error) {
-                console.error('Error cargando promociones:', error);
-                return [];
-            }
-            return data || [];
+        async function verificarAuth() {
+            const user = await window.checkAuth();
+            if (!user) return false;
+            return true;
         }
 
-        function renderPromociones(promos) {
-            if (!promos || promos.length === 0) {
-                promoContainer.classList.add('empty');
-                promoContainer.innerHTML = '';
-                return;
-            }
-            promoContainer.classList.remove('empty');
-            
-            if (promos.length === 1) {
-                // Una sola promoción: estática
-                const promo = promos[0];
-                const html = `
-                    <div class="promo-slider" style="min-height: 160px;">
-                        <div class="promo-slide active" style="background-image: url('${escapeHtml(promo.imagen_url)}'); background-size: cover; background-position: center;">
-                            ${promo.link ? `<a href="${escapeHtml(promo.link)}" target="_blank" class="promo-link" style="display:block; width:100%; height:100%;"></a>` : '<div class="promo-link" style="display:block; width:100%; height:100%;"></div>'}
-                            ${promo.texto ? `<div class="promo-content">${escapeHtml(promo.texto)}</div>` : ''}
-                        </div>
-                    </div>
-                `;
-                promoContainer.innerHTML = html;
-                return;
-            }
-            
-            // Múltiples promociones: carrusel con dots
-            let slidesHtml = '';
-            let dotsHtml = '';
-            promos.forEach((p, idx) => {
-                slidesHtml += `
-                    <div class="promo-slide ${idx === 0 ? 'active' : ''}" style="background-image: url('${escapeHtml(p.imagen_url)}'); background-size: cover; background-position: center;">
-                        ${p.link ? `<a href="${escapeHtml(p.link)}" target="_blank" class="promo-link" style="display:block; width:100%; height:100%;"></a>` : '<div class="promo-link" style="display:block; width:100%; height:100%;"></div>'}
-                        ${p.texto ? `<div class="promo-content">${escapeHtml(p.texto)}</div>` : ''}
-                    </div>
-                `;
-                dotsHtml += `<div class="dot ${idx === 0 ? 'active' : ''}" data-index="${idx}"></div>`;
-            });
-            promoContainer.innerHTML = `
-                <div class="promo-slider" id="promoSlider" style="min-height: 160px; position: relative;">
-                    ${slidesHtml}
-                </div>
-                <div class="promo-dots" id="promoDots">${dotsHtml}</div>
-            `;
-            
-            // Iniciar carrusel automático (cada 4 segundos)
-            if (carruselInterval) clearInterval(carruselInterval);
-            carruselInterval = setInterval(() => {
-                let next = (slideIndex + 1) % promos.length;
-                cambiarSlide(next, promos);
-            }, 4000);
-            
-            // Eventos para los dots
-            document.querySelectorAll('.dot').forEach(dot => {
-                dot.addEventListener('click', (e) => {
-                    const idx = parseInt(dot.dataset.index);
-                    if (!isNaN(idx) && idx !== slideIndex) {
-                        if (carruselInterval) clearInterval(carruselInterval);
-                        cambiarSlide(idx, promos);
-                        // Reiniciar intervalo
-                        carruselInterval = setInterval(() => {
-                            let next = (slideIndex + 1) % promos.length;
-                            cambiarSlide(next, promos);
-                        }, 4000);
-                    }
-                });
-            });
-            
-            // Pausar al hacer hover sobre el slider (opcional)
-            const sliderDiv = document.getElementById('promoSlider');
-            if (sliderDiv) {
-                sliderDiv.addEventListener('mouseenter', () => {
-                    if (carruselInterval) clearInterval(carruselInterval);
-                });
-                sliderDiv.addEventListener('mouseleave', () => {
-                    if (carruselInterval) clearInterval(carruselInterval);
-                    carruselInterval = setInterval(() => {
-                        let next = (slideIndex + 1) % promos.length;
-                        cambiarSlide(next, promos);
-                    }, 4000);
-                });
-            }
-        }
-        
-        function cambiarSlide(index, promos) {
-            const slides = document.querySelectorAll('.promo-slide');
-            const dots = document.querySelectorAll('.dot');
-            if (!slides.length) return;
-            slides.forEach(slide => slide.classList.remove('active'));
-            dots.forEach(dot => dot.classList.remove('active'));
-            slides[index].classList.add('active');
-            dots[index].classList.add('active');
-            slideIndex = index;
-        }
-
-        // ---------- FUNCIONES DE TIENDA (ya existentes) ----------
-        async function cargarDatos() {
-            try {
-                // Productos
-                const { data: prods, error: errProds } = await supabaseClient
-                    .from('productos')
-                    .select('*')
-                    .not('precio_cup', 'is', null)
-                    .order('id', { ascending: false });
-                if (errProds) throw errProds;
-                productos = prods || [];
-
-                // Departamentos
-                const { data: depts, error: errDepts } = await supabaseClient
-                    .from('departamentos')
-                    .select('*')
-                    .order('nombre');
-                if (errDepts) throw errDepts;
-                departamentos = depts || [];
-
-                // Relaciones
-                const { data: rels, error: errRels } = await supabaseClient
-                    .from('producto_departamento')
-                    .select('*');
-                if (errRels) throw errRels;
-                relaciones = {};
-                (rels || []).forEach(r => {
-                    if (!relaciones[r.producto_id]) relaciones[r.producto_id] = [];
-                    relaciones[r.producto_id].push(r.departamento_id);
-                });
-
-                // Configuración WhatsApp
-                const { data: config, error: errConf } = await supabaseClient
-                    .from('configuracion')
-                    .select('valor')
-                    .eq('clave', 'whatsapp_numero')
-                    .maybeSingle();
-                if (!errConf && config) whatsappNumero = config.valor;
-
-                // Promociones (activas)
-                promociones = await cargarPromociones();
-                renderPromociones(promociones);
-                
-                renderizarDepartamentos();
-                renderizarProductos();
-            } catch (error) {
-                console.error(error);
-                productosContainer.innerHTML = '<div class="empty-message">Error al cargar datos. Recarga la página.</div>';
-            }
+        async function cargarDepartamentos() {
+            const supabase = window.supabaseClient;
+            const { data, error } = await supabase.from('departamentos').select('*').order('nombre');
+            if (error) { console.error(error); return; }
+            departamentos = data || [];
+            renderizarDepartamentos();
         }
 
         function renderizarDepartamentos() {
-            let html = '<button class="dept-btn active" data-id="all">Todos</button>';
-            departamentos.forEach(d => {
-                html += `<button class="dept-btn" data-id="${d.id}">${escapeHtml(d.nombre)}</button>`;
-            });
-            departamentosContainer.innerHTML = html;
-            document.querySelectorAll('.dept-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    document.querySelectorAll('.dept-btn').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    const id = btn.dataset.id;
-                    currentDept = id === 'all' ? 'all' : parseInt(id);
-                    renderizarProductos();
-                });
-            });
-        }
-
-        function renderizarProductos() {
-            let filtrados = [...productos];
-            if (currentDept !== 'all') {
-                filtrados = filtrados.filter(p => {
-                    const deptIds = relaciones[p.id] || [];
-                    return deptIds.includes(currentDept);
-                });
-            }
-            if (filtrados.length === 0) {
-                productosContainer.innerHTML = '<div class="empty-message">No hay productos en esta categoría.</div>';
+            const grid = document.getElementById('departamentosGrid');
+            if (departamentos.length === 0) {
+                grid.innerHTML = '<div class="card">No hay departamentos. Crea uno nuevo.</div>';
                 return;
             }
-            productosContainer.innerHTML = filtrados.map(p => {
-                const imgHtml = p.foto_url 
-                    ? `<img class="product-img" src="${p.foto_url}" alt="${escapeHtml(p.nombre)}" onerror="this.src='https://placehold.co/400x200?text=Sin+imagen'">`
-                    : `<div class="product-img" style="background:#e2e8f0; display:flex; align-items:center; justify-content:center;">📷 Sin foto</div>`;
-                return `
-                    <div class="product-card" data-id="${p.id}">
-                        ${imgHtml}
-                        <div class="product-info">
-                            <div class="product-name">${escapeHtml(p.nombre)}</div>
-                            <div class="product-price">${p.precio_cup.toFixed(2)} CUP</div>
-                            <button class="add-btn" data-id="${p.id}">Añadir al carrito</button>
-                            <button class="details-btn" data-id="${p.id}">🔍 Detalles</button>
-                        </div>
+            grid.innerHTML = departamentos.map(d => `
+                <div class="dept-card">
+                    <h3>${escapeHtml(d.nombre)}</h3>
+                    <div style="display:flex; gap:8px; margin-top:10px">
+                        <button class="editDeptBtn" data-id="${d.id}" data-nombre="${escapeHtml(d.nombre)}">✏️ Editar</button>
+                        <button class="deleteDeptBtn danger" data-id="${d.id}" data-nombre="${escapeHtml(d.nombre)}">🗑 Eliminar</button>
                     </div>
-                `;
-            }).join('');
-            document.querySelectorAll('.add-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const prodId = parseInt(btn.dataset.id);
-                    const producto = productos.find(p => p.id === prodId);
-                    if (producto) añadirAlCarrito(producto);
-                });
+                </div>
+            `).join('');
+            document.querySelectorAll('.editDeptBtn').forEach(btn => {
+                btn.addEventListener('click', () => editarDepartamento(parseInt(btn.dataset.id), btn.dataset.nombre));
             });
-            document.querySelectorAll('.details-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const prodId = parseInt(btn.dataset.id);
-                    const producto = productos.find(p => p.id === prodId);
-                    if (producto) abrirModalDetalle(producto);
-                });
+            document.querySelectorAll('.deleteDeptBtn').forEach(btn => {
+                btn.addEventListener('click', () => eliminarDepartamento(parseInt(btn.dataset.id), btn.dataset.nombre));
             });
         }
 
-        function añadirAlCarrito(producto) {
-            const existente = carrito.find(item => item.id === producto.id);
-            if (existente) existente.cantidad++;
-            else carrito.push({ id: producto.id, nombre: producto.nombre, precio: producto.precio_cup, cantidad: 1, foto_url: producto.foto_url });
-            actualizarCarritoUI();
+        function nuevoDepartamento() {
+            const nombre = prompt('Nombre del nuevo departamento:');
+            if (!nombre || !nombre.trim()) return;
+            crearDepartamento(nombre.trim());
         }
 
-        function actualizarCarritoUI() {
-            const totalItems = carrito.reduce((sum, i) => sum + i.cantidad, 0);
-            cartCountSpan.innerText = totalItems;
-            if (carrito.length === 0) {
-                cartItemsList.innerHTML = '<div style="text-align:center; padding:20px;">Carrito vacío</div>';
-                cartTotalSpan.innerText = '0.00 CUP';
-                return;
-            }
-            let html = '';
-            let total = 0;
-            carrito.forEach((item, idx) => {
-                const subtotal = item.precio * item.cantidad;
-                total += subtotal;
-                html += `
-                    <div class="cart-item">
-                        <div class="cart-item-info">
-                            <div class="cart-item-name">${escapeHtml(item.nombre)}</div>
-                            <div class="cart-item-price">${item.precio.toFixed(2)} CUP c/u</div>
-                        </div>
-                        <div class="cart-item-actions">
-                            <button class="decr-item" data-idx="${idx}">-</button>
-                            <span>${item.cantidad}</span>
-                            <button class="incr-item" data-idx="${idx}">+</button>
-                            <button class="remove-item" data-idx="${idx}" style="background:#fee2e2; color:#dc2626;">🗑</button>
-                        </div>
-                    </div>
-                `;
-            });
-            cartItemsList.innerHTML = html;
-            cartTotalSpan.innerText = total.toFixed(2) + ' CUP';
-
-            document.querySelectorAll('.decr-item').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const idx = parseInt(btn.dataset.idx);
-                    if (carrito[idx].cantidad > 1) carrito[idx].cantidad--;
-                    else carrito.splice(idx, 1);
-                    actualizarCarritoUI();
-                });
-            });
-            document.querySelectorAll('.incr-item').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const idx = parseInt(btn.dataset.idx);
-                    carrito[idx].cantidad++;
-                    actualizarCarritoUI();
-                });
-            });
-            document.querySelectorAll('.remove-item').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const idx = parseInt(btn.dataset.idx);
-                    carrito.splice(idx, 1);
-                    actualizarCarritoUI();
-                });
-            });
+        async function crearDepartamento(nombre) {
+            const supabase = window.supabaseClient;
+            const { error } = await supabase.from('departamentos').insert({ nombre });
+            if (error) alert('Error al crear: ' + error.message);
+            else await cargarDepartamentos();
         }
 
-        function vaciarCarrito() {
-            if (confirm('¿Vaciar completamente el carrito?')) {
-                carrito = [];
-                actualizarCarritoUI();
-            }
+        function editarDepartamento(id, nombreActual) {
+            const nuevoNombre = prompt('Editar nombre del departamento:', nombreActual);
+            if (!nuevoNombre || nuevoNombre.trim() === nombreActual) return;
+            actualizarDepartamento(id, nuevoNombre.trim());
         }
 
-        function enviarPedidoWhatsApp() {
-            if (carrito.length === 0) { alert('El carrito está vacío.'); return; }
-            let mensaje = '🛒 *Nuevo pedido:*%0A';
-            carrito.forEach(item => mensaje += `- ${item.nombre} x ${item.cantidad} = ${(item.precio * item.cantidad).toFixed(2)} CUP%0A`);
-            const total = carrito.reduce((sum, i) => sum + (i.precio * i.cantidad), 0);
-            mensaje += `%0A*Total:* ${total.toFixed(2)} CUP`;
-            window.open(`https://wa.me/${whatsappNumero}?text=${mensaje}`, '_blank');
+        async function actualizarDepartamento(id, nuevoNombre) {
+            const supabase = window.supabaseClient;
+            const { error } = await supabase.from('departamentos').update({ nombre: nuevoNombre }).eq('id', id);
+            if (error) alert('Error al actualizar: ' + error.message);
+            else await cargarDepartamentos();
         }
 
-        function abrirCarrito() { cartOverlay.classList.add('active'); }
-        function cerrarCarrito() { cartOverlay.classList.remove('active'); }
-
-        function abrirModalDetalle(producto) {
-            detailImg.src = producto.foto_url || 'https://placehold.co/400x200?text=Sin+imagen';
-            detailName.innerText = producto.nombre;
-            detailPrice.innerText = `${producto.precio_cup.toFixed(2)} CUP`;
-            detailDesc.innerText = producto.descripcion && producto.descripcion.trim() !== '' ? producto.descripcion : 'Este producto no tiene descripción.';
-            detailModalOverlay.classList.add('active');
+        function eliminarDepartamento(id, nombre) {
+            if (!confirm(`¿Eliminar departamento "${nombre}"? Se perder&aacute;n las relaciones con productos (no los productos).`)) return;
+            ejecutarEliminacion(id);
         }
-        function cerrarModalDetalle() { detailModalOverlay.classList.remove('active'); }
+
+        async function ejecutarEliminacion(id) {
+            const supabase = window.supabaseClient;
+            const { error } = await supabase.from('departamentos').delete().eq('id', id);
+            if (error) alert('Error al eliminar: ' + error.message);
+            else await cargarDepartamentos();
+        }
 
         function escapeHtml(str) {
             if (!str) return '';
@@ -811,54 +115,12 @@
             });
         }
 
-        // ---------- EFECTO DE BIENVENIDA (reducción de altura) ----------
-        const hero = document.getElementById('hero');
-        const heroLogo = document.getElementById('heroLogo');
-        const smallLogoDiv = document.getElementById('smallLogo');
-        let efectoActivo = true;
-        const initialHeroHeight = window.innerHeight;
+        document.getElementById('logoutBtn').addEventListener('click', async () => { await window.logout(); });
+        document.getElementById('newDeptBtn').addEventListener('click', nuevoDepartamento);
 
-        function handleScroll() {
-            if (!efectoActivo) return;
-            const scrollY = window.scrollY;
-            const maxScroll = initialHeroHeight * 0.9;
-            let progress = Math.min(1, scrollY / maxScroll);
-            
-            if (progress >= 0.99) {
-                hero.style.display = 'none';
-                smallLogoDiv.classList.add('visible');
-                efectoActivo = false;
-                window.removeEventListener('scroll', handleScroll);
-                return;
-            }
-            
-            const newHeight = initialHeroHeight * (1 - progress);
-            hero.style.height = `${newHeight}px`;
-            const scale = 1 - (progress * 0.7);
-            const opacity = 1 - (progress * 0.9);
-            heroLogo.style.transform = `scale(${scale})`;
-            heroLogo.style.opacity = opacity;
-        }
-
-        window.addEventListener('load', () => {
-            hero.style.display = 'flex';
-            hero.style.height = `${initialHeroHeight}px`;
-            heroLogo.style.transform = 'scale(1)';
-            heroLogo.style.opacity = '1';
-            smallLogoDiv.classList.remove('visible');
-            efectoActivo = true;
-            window.addEventListener('scroll', handleScroll);
-            cargarDatos();
-        });
-
-        // Eventos de interfaz
-        cartIcon.addEventListener('click', abrirCarrito);
-        if (closeCartBtn) closeCartBtn.addEventListener('click', cerrarCarrito);
-        cartOverlay.addEventListener('click', (e) => { if (e.target === cartOverlay) cerrarCarrito(); });
-        clearCartBtn.addEventListener('click', vaciarCarrito);
-        whatsappOrderBtn.addEventListener('click', enviarPedidoWhatsApp);
-        closeDetailBtn.addEventListener('click', cerrarModalDetalle);
-        detailModalOverlay.addEventListener('click', (e) => { if (e.target === detailModalOverlay) cerrarModalDetalle(); });
+        (async () => {
+            if (await verificarAuth()) await cargarDepartamentos();
+        })();
     </script>
 </body>
 </html>
