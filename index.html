@@ -6,7 +6,6 @@
     <title>MercaMax - Tienda en CUP</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* ---------- RESET Y ESTILOS BASE ---------- */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -14,23 +13,26 @@
             color: #0f172a;
         }
 
-        /* ---------- CONTENEDOR DE LA BIENVENIDA (logo grande) ---------- */
+        /* Pantalla de bienvenida (logo grande) */
         .hero {
-            position: relative;
+            position: fixed;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100vh;
-            background-color: white;
+            background-color: #EBF8DA; /* Color solicitado */
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 10;
-            /* Se moverá con el scroll gracias a JavaScript */
-            transition: none; /* Evitamos transiciones CSS para que JS tenga control total */
+            z-index: 1000;
+            transition: opacity 0.3s ease;
+            will-change: transform;
         }
         .hero-logo {
             width: 80%;
             max-width: 300px;
             text-align: center;
+            transition: transform 0.1s linear, opacity 0.1s linear;
         }
         .hero-logo img {
             width: 100%;
@@ -38,9 +40,9 @@
             display: block;
         }
 
-        /* ---------- HEADER (estático con logo pequeño oculto) ---------- */
+        /* Header (barra superior) con el mismo color de fondo */
         .header {
-            background: white;
+            background: #EBF8DA; /* Mismo color */
             padding: 12px 20px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.05);
             position: sticky;
@@ -60,15 +62,15 @@
         .small-logo {
             width: 0;
             overflow: hidden;
-            transition: width 0.2s ease;
+            transition: width 0.3s ease;
         }
         .small-logo img {
-            height: 32px;
+            height: 36px;
             width: auto;
             display: block;
         }
         .small-logo.visible {
-            width: 32px;
+            width: 36px;
         }
         .logo-container h1 {
             font-size: 1.5rem;
@@ -76,7 +78,7 @@
             white-space: nowrap;
         }
 
-        /* Resto de estilos (carrito, productos, etc.) se mantienen igual que antes */
+        /* Resto de estilos (carrito, departamentos, productos, modales) se mantienen igual */
         .cart-icon {
             position: relative;
             cursor: pointer;
@@ -105,7 +107,7 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
-        /* ---------- MODAL CARRITO ---------- */
+        /* Modal carrito */
         .cart-overlay {
             position: fixed;
             top: 0;
@@ -318,7 +320,7 @@
 
     <!-- Pantalla de bienvenida (logo grande) -->
     <div id="hero" class="hero">
-        <div class="hero-logo">
+        <div class="hero-logo" id="heroLogo">
             <img src="https://hopssnvzzcwgromqsyyj.supabase.co/storage/v1/object/public/productos/Iconos/Logo.jpeg" alt="MercaMax">
         </div>
     </div>
@@ -341,7 +343,7 @@
         </div>
     </div>
 
-    <!-- Contenido principal (departamentos, productos) -->
+    <!-- Contenido principal -->
     <div class="departamentos" id="departamentosContainer">
         <button class="dept-btn active" data-id="all">Todos</button>
     </div>
@@ -349,17 +351,42 @@
         <div class="empty-message">Cargando productos...</div>
     </div>
 
-    <!-- Modales -->
-    <div class="cart-overlay" id="cartOverlay">...</div>
-    <div class="detail-modal-overlay" id="detailModalOverlay">...</div>
+    <!-- Modales (carrito y detalles) -->
+    <div class="cart-overlay" id="cartOverlay">
+        <div class="cart-panel">
+            <div class="cart-header">
+                <h2>Tu pedido</h2>
+                <button class="close-cart" id="closeCartBtn">&times;</button>
+            </div>
+            <div class="cart-items" id="cartItemsList"></div>
+            <div class="cart-total">
+                <span>Total:</span>
+                <span id="cartTotal">0.00 CUP</span>
+            </div>
+            <div class="cart-buttons">
+                <button class="btn-whatsapp" id="whatsappOrderBtn">📲 Pedir por WhatsApp</button>
+                <button class="btn-secondary" id="clearCartBtn">Vaciar carrito</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="detail-modal-overlay" id="detailModalOverlay">
+        <div class="detail-modal">
+            <img id="detailImg" src="" alt="">
+            <h3 id="detailName"></h3>
+            <div class="detail-price" id="detailPrice"></div>
+            <div class="detail-description" id="detailDesc"></div>
+            <button class="close-detail" id="closeDetailBtn">Cerrar</button>
+        </div>
+    </div>
 
     <script>
-        // ------------------------- CONFIGURACIÓN SUPABASE -------------------------
+        // ---------- CONFIGURACIÓN SUPABASE ----------
         const SUPABASE_URL = 'https://hopssnvzzcwgromqsyyj.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhvcHNzbnZ6emN3Z3JvbXFzeXlqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2MTczNTcsImV4cCI6MjA5NDE5MzM1N30.jAgmJV_eq4MkWboMgqDMYbCF5Kjp3nhn21DQ7xsHGCM';
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // ------------------------- ESTADO GLOBAL -------------------------
+        // ---------- ESTADO GLOBAL ----------
         let productos = [];
         let departamentos = [];
         let relaciones = {};
@@ -367,12 +394,12 @@
         let carrito = [];
         let whatsappNumero = '521234567890';
 
-        // Elementos DOM
+        // ---------- ELEMENTOS DOM ----------
         const productosContainer = document.getElementById('productosContainer');
         const departamentosContainer = document.getElementById('departamentosContainer');
         const cartIcon = document.getElementById('cartIcon');
         const cartOverlay = document.getElementById('cartOverlay');
-        const closeCartBtn = document.querySelector('#cartOverlay .close-cart');
+        const closeCartBtn = document.getElementById('closeCartBtn');
         const cartItemsList = document.getElementById('cartItemsList');
         const cartTotalSpan = document.getElementById('cartTotal');
         const cartCountSpan = document.getElementById('cartCount');
@@ -385,12 +412,7 @@
         const detailDesc = document.getElementById('detailDesc');
         const closeDetailBtn = document.getElementById('closeDetailBtn');
 
-        // Elementos del efecto de bienvenida
-        const hero = document.getElementById('hero');
-        const smallLogo = document.getElementById('smallLogo');
-        let effectTriggered = false;
-
-        // ------------------------- FUNCIONES DE LA TIENDA (CRUD, CARRITO) -------------------------
+        // ---------- FUNCIONES DE TIENDA ----------
         async function cargarDatos() {
             try {
                 const { data: prods, error: errProds } = await supabaseClient
@@ -594,52 +616,49 @@
             });
         }
 
-        // ------------------------- EFECTO DE BIENVENIDA (DESPLAZAMIENTO Y TRANSFORMACIÓN) -------------------------
-        function initScrollEffect() {
-            if (effectTriggered) return;
-            // Altura inicial del hero (100vh)
-            const heroHeight = window.innerHeight;
-            // Posición inicial del logo dentro del hero (centro de la pantalla)
-            const logo = hero.querySelector('.hero-logo');
-            const logoRect = logo.getBoundingClientRect();
-            const logoTop = logoRect.top;
-            const logoHeight = logoRect.height;
-            // Posición objetivo: el logo pequeño en el header (aproximadamente)
-            const header = document.getElementById('mainHeader');
-            const smallLogoRect = smallLogo.getBoundingClientRect();
-            // Calculamos el desplazamiento necesario para que el logo grande se convierta en el pequeño
-            // Usaremos transform: translateY() y scale() basados en el scroll.
-            let maxScroll = heroHeight - 80; // hasta que el hero desaparezca casi
-            window.addEventListener('scroll', function() {
-                if (effectTriggered) return;
-                let scrollY = window.scrollY;
-                let progress = Math.min(1, Math.max(0, scrollY / maxScroll));
-                if (progress >= 1) {
-                    // Final del efecto: ocultar hero completamente y mostrar logo pequeño
-                    hero.style.display = 'none';
-                    smallLogo.classList.add('visible');
-                    effectTriggered = true;
-                    window.removeEventListener('scroll', this);
-                    return;
-                }
-                // Interpolación: mover el hero hacia arriba y reducir escala
-                // El hero se mueve hacia arriba proporcionalmente al scroll
-                let translateY = -scrollY * 0.8; // se desplaza hacia arriba
-                let scale = 1 - progress * 0.7; // reduce hasta 0.3
-                let opacity = 1 - progress * 0.8;
-                logo.style.transform = `translateY(${translateY}px) scale(${scale})`;
-                logo.style.opacity = opacity;
-                hero.style.backgroundColor = `rgba(255,255,255,${1 - progress*0.5})`;
-            });
+        // ---------- EFECTO DE BIENVENIDA (DESPLAZAMIENTO Y TRANSFORMACIÓN) ----------
+        const hero = document.getElementById('hero');
+        const heroLogo = document.getElementById('heroLogo');
+        const smallLogoDiv = document.getElementById('smallLogo');
+        let efectoActivo = true;
+
+        function handleScroll() {
+            if (!efectoActivo) return;
+            const scrollY = window.scrollY;
+            const maxScroll = window.innerHeight * 0.8; // La transformación termina después de 80% de la pantalla
+            let progress = Math.min(1, scrollY / maxScroll);
+            
+            if (progress >= 0.99) {
+                // Terminar efecto: ocultar hero y mostrar logo pequeño
+                hero.style.display = 'none';
+                smallLogoDiv.classList.add('visible');
+                efectoActivo = false;
+                window.removeEventListener('scroll', handleScroll);
+                return;
+            }
+            
+            // Mover el logo hacia arriba y reducir escala
+            const translateY = -scrollY * 0.6; // Se desplaza hacia arriba más suavemente
+            const scale = 1 - progress * 0.7; // Reduce hasta 0.3 de su tamaño
+            const opacity = 1 - progress * 0.9;
+            
+            heroLogo.style.transform = `translateY(${translateY}px) scale(${scale})`;
+            heroLogo.style.opacity = opacity;
+            // El fondo del hero se mantiene igual, no cambia
         }
 
-        // Inicializar el efecto cuando el DOM esté listo
+        // Iniciar el efecto cuando la página cargue
         window.addEventListener('load', () => {
-            initScrollEffect();
+            // Asegurar que el hero esté visible
+            hero.style.display = 'flex';
+            heroLogo.style.transform = '';
+            heroLogo.style.opacity = '1';
+            efectoActivo = true;
+            window.addEventListener('scroll', handleScroll);
             cargarDatos();
         });
 
-        // Eventos de la interfaz
+        // Eventos de interfaz
         cartIcon.addEventListener('click', abrirCarrito);
         if (closeCartBtn) closeCartBtn.addEventListener('click', cerrarCarrito);
         cartOverlay.addEventListener('click', (e) => { if (e.target === cartOverlay) cerrarCarrito(); });
