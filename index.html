@@ -13,26 +13,23 @@
             color: #0f172a;
         }
 
-        /* Pantalla de bienvenida (logo grande) */
+        /* Pantalla de bienvenida (logo grande) - ahora en flujo normal */
         .hero {
-            position: fixed;
-            top: 0;
-            left: 0;
             width: 100%;
             height: 100vh;
-            background-color: #EBF8DA; /* Color solicitado */
+            background-color: #EBF8DA;
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 1000;
-            transition: opacity 0.3s ease;
+            position: relative;
             will-change: transform;
+            transition: opacity 0.2s linear;
         }
         .hero-logo {
             width: 80%;
             max-width: 300px;
             text-align: center;
-            transition: transform 0.1s linear, opacity 0.1s linear;
+            transition: transform 0.05s linear, opacity 0.05s linear;
         }
         .hero-logo img {
             width: 100%;
@@ -42,7 +39,7 @@
 
         /* Header (barra superior) con el mismo color de fondo */
         .header {
-            background: #EBF8DA; /* Mismo color */
+            background: #EBF8DA;
             padding: 12px 20px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.05);
             position: sticky;
@@ -318,7 +315,7 @@
 </head>
 <body>
 
-    <!-- Pantalla de bienvenida (logo grande) -->
+    <!-- Pantalla de bienvenida (logo grande) - ahora en flujo normal -->
     <div id="hero" class="hero">
         <div class="hero-logo" id="heroLogo">
             <img src="https://hopssnvzzcwgromqsyyj.supabase.co/storage/v1/object/public/productos/Iconos/Logo.jpeg" alt="MercaMax">
@@ -351,7 +348,7 @@
         <div class="empty-message">Cargando productos...</div>
     </div>
 
-    <!-- Modales (carrito y detalles) -->
+    <!-- Modales -->
     <div class="cart-overlay" id="cartOverlay">
         <div class="cart-panel">
             <div class="cart-header">
@@ -412,7 +409,7 @@
         const detailDesc = document.getElementById('detailDesc');
         const closeDetailBtn = document.getElementById('closeDetailBtn');
 
-        // ---------- FUNCIONES DE TIENDA ----------
+        // ---------- FUNCIONES DE TIENDA (igual que antes) ----------
         async function cargarDatos() {
             try {
                 const { data: prods, error: errProds } = await supabaseClient
@@ -616,44 +613,50 @@
             });
         }
 
-        // ---------- EFECTO DE BIENVENIDA (DESPLAZAMIENTO Y TRANSFORMACIÓN) ----------
+        // ---------- EFECTO DE BIENVENIDA (scroll normal, el hero se desplaza hacia arriba) ----------
         const hero = document.getElementById('hero');
         const heroLogo = document.getElementById('heroLogo');
         const smallLogoDiv = document.getElementById('smallLogo');
-        let efectoActivo = true;
+        let efectoTerminado = false;
+
+        // Altura inicial del hero (100vh)
+        const heroHeight = hero.offsetHeight;
 
         function handleScroll() {
-            if (!efectoActivo) return;
+            if (efectoTerminado) return;
             const scrollY = window.scrollY;
-            const maxScroll = window.innerHeight * 0.8; // La transformación termina después de 80% de la pantalla
+            // El hero debe empezar a moverse hacia arriba con el scroll, pero también reducir su escala
+            // La distancia máxima de desplazamiento es la altura del hero (hasta que desaparezca)
+            const maxScroll = heroHeight * 0.9; // Cuando el scroll llegue al 90% de la altura del hero, terminamos
             let progress = Math.min(1, scrollY / maxScroll);
-            
+
             if (progress >= 0.99) {
-                // Terminar efecto: ocultar hero y mostrar logo pequeño
+                // Ocultar hero completamente y mostrar logo pequeño
                 hero.style.display = 'none';
                 smallLogoDiv.classList.add('visible');
-                efectoActivo = false;
+                efectoTerminado = true;
                 window.removeEventListener('scroll', handleScroll);
                 return;
             }
-            
-            // Mover el logo hacia arriba y reducir escala
-            const translateY = -scrollY * 0.6; // Se desplaza hacia arriba más suavemente
-            const scale = 1 - progress * 0.7; // Reduce hasta 0.3 de su tamaño
-            const opacity = 1 - progress * 0.9;
-            
-            heroLogo.style.transform = `translateY(${translateY}px) scale(${scale})`;
+
+            // Aplicar transform al contenedor hero: moverlo hacia arriba
+            // Para que el contenido de la tienda sea visible, el hero se desplaza hacia arriba.
+            // El logo interior además se escala y reduce opacidad
+            hero.style.transform = `translateY(-${scrollY}px)`;
+            // El logo interior se reduce y se vuelve más transparente
+            const scale = 1 - progress * 0.7;
+            const opacity = 1 - progress * 0.8;
+            heroLogo.style.transform = `scale(${scale})`;
             heroLogo.style.opacity = opacity;
-            // El fondo del hero se mantiene igual, no cambia
         }
 
-        // Iniciar el efecto cuando la página cargue
+        // Iniciar efecto cuando la página cargue
         window.addEventListener('load', () => {
-            // Asegurar que el hero esté visible
             hero.style.display = 'flex';
-            heroLogo.style.transform = '';
+            hero.style.transform = 'translateY(0)';
+            heroLogo.style.transform = 'scale(1)';
             heroLogo.style.opacity = '1';
-            efectoActivo = true;
+            efectoTerminado = false;
             window.addEventListener('scroll', handleScroll);
             cargarDatos();
         });
