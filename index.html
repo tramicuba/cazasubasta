@@ -13,17 +13,16 @@
             color: #0f172a;
         }
 
-        /* Pantalla de bienvenida (logo grande) - ahora con altura variable */
+        /* Pantalla de bienvenida (logo grande) */
         .hero {
             width: 100%;
-            height: 100vh; /* altura inicial */
+            height: 100vh;
             background-color: #EBF8DA;
             display: flex;
             justify-content: center;
             align-items: center;
             position: relative;
-            will-change: height, transform;
-            transition: none; /* controlado por js */
+            will-change: height;
         }
         .hero-logo {
             width: 80%;
@@ -37,7 +36,7 @@
             display: block;
         }
 
-        /* Header fijo (sticky) */
+        /* Header fijo */
         .header {
             background: #EBF8DA;
             padding: 12px 20px;
@@ -75,7 +74,84 @@
             white-space: nowrap;
         }
 
-        /* Resto de estilos igual que antes */
+        /* ------ BANNER DE PROMOCIONES ------ */
+        .promo-container {
+            width: 100%;
+            background: #EBF8DA; /* mismo fondo para integrarse */
+            overflow: hidden;
+            position: relative;
+        }
+        .promo-slider {
+            position: relative;
+            width: 100%;
+            min-height: 160px;
+            background: #EBF8DA;
+        }
+        .promo-slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            transition: opacity 0.8s ease-in-out;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-size: cover;
+            background-position: center center;
+            background-repeat: no-repeat;
+            min-height: 160px;
+        }
+        .promo-slide.active {
+            opacity: 1;
+            position: relative;
+        }
+        .promo-link {
+            display: block;
+            width: 100%;
+            height: 100%;
+            text-decoration: none;
+            color: inherit;
+        }
+        .promo-content {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            max-width: 80%;
+            backdrop-filter: blur(4px);
+        }
+        .promo-dots {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            padding: 8px 0;
+            background: #EBF8DA;
+        }
+        .dot {
+            width: 10px;
+            height: 10px;
+            background: #9ca3af;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .dot.active {
+            background: #3b82f6;
+            width: 24px;
+            border-radius: 10px;
+        }
+        /* Ajuste para cuando no hay promociones: no mostrar nada */
+        .promo-container.empty {
+            display: none;
+        }
+
+        /* Resto de estilos (carrito, departamentos, productos, modales) - sin cambios */
         .cart-icon {
             position: relative;
             cursor: pointer;
@@ -306,6 +382,8 @@
             .departamentos { top: 68px; padding: 12px 16px; }
             .cart-icon { width: 42px; height: 42px; }
             .cart-icon svg { width: 22px; height: 22px; }
+            .promo-slider { min-height: 120px; }
+            .promo-content { font-size: 0.7rem; bottom: 8px; left: 8px; padding: 4px 10px; }
         }
     </style>
 </head>
@@ -336,10 +414,15 @@
         </div>
     </div>
 
-    <!-- Contenido principal -->
+    <!-- Contenedor de promociones (se llenará dinámicamente) -->
+    <div id="promoContainer" class="promo-container empty"></div>
+
+    <!-- Barra de departamentos -->
     <div class="departamentos" id="departamentosContainer">
         <button class="dept-btn active" data-id="all">Todos</button>
     </div>
+
+    <!-- Productos -->
     <div id="productosContainer" class="productos-grid">
         <div class="empty-message">Cargando productos...</div>
     </div>
@@ -386,6 +469,9 @@
         let currentDept = 'all';
         let carrito = [];
         let whatsappNumero = '521234567890';
+        let promociones = [];          // almacenar promociones activas
+        let carruselInterval = null;
+        let slideIndex = 0;
 
         // ---------- ELEMENTOS DOM ----------
         const productosContainer = document.getElementById('productosContainer');
@@ -404,10 +490,119 @@
         const detailPrice = document.getElementById('detailPrice');
         const detailDesc = document.getElementById('detailDesc');
         const closeDetailBtn = document.getElementById('closeDetailBtn');
+        const promoContainer = document.getElementById('promoContainer');
 
-        // ---------- FUNCIONES DE TIENDA ----------
+        // ---------- FUNCIONES DE PROMOCIONES ----------
+        async function cargarPromociones() {
+            const { data, error } = await supabaseClient
+                .from('promociones')
+                .select('*')
+                .eq('activa', true)
+                .order('orden', { ascending: true })
+                .order('id', { ascending: false });
+            if (error) {
+                console.error('Error cargando promociones:', error);
+                return [];
+            }
+            return data || [];
+        }
+
+        function renderPromociones(promos) {
+            if (!promos || promos.length === 0) {
+                promoContainer.classList.add('empty');
+                promoContainer.innerHTML = '';
+                return;
+            }
+            promoContainer.classList.remove('empty');
+            
+            if (promos.length === 1) {
+                // Una sola promoción: estática
+                const promo = promos[0];
+                const html = `
+                    <div class="promo-slider" style="min-height: 160px;">
+                        <div class="promo-slide active" style="background-image: url('${escapeHtml(promo.imagen_url)}'); background-size: cover; background-position: center;">
+                            ${promo.link ? `<a href="${escapeHtml(promo.link)}" target="_blank" class="promo-link" style="display:block; width:100%; height:100%;"></a>` : '<div class="promo-link" style="display:block; width:100%; height:100%;"></div>'}
+                            ${promo.texto ? `<div class="promo-content">${escapeHtml(promo.texto)}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+                promoContainer.innerHTML = html;
+                return;
+            }
+            
+            // Múltiples promociones: carrusel con dots
+            let slidesHtml = '';
+            let dotsHtml = '';
+            promos.forEach((p, idx) => {
+                slidesHtml += `
+                    <div class="promo-slide ${idx === 0 ? 'active' : ''}" style="background-image: url('${escapeHtml(p.imagen_url)}'); background-size: cover; background-position: center;">
+                        ${p.link ? `<a href="${escapeHtml(p.link)}" target="_blank" class="promo-link" style="display:block; width:100%; height:100%;"></a>` : '<div class="promo-link" style="display:block; width:100%; height:100%;"></div>'}
+                        ${p.texto ? `<div class="promo-content">${escapeHtml(p.texto)}</div>` : ''}
+                    </div>
+                `;
+                dotsHtml += `<div class="dot ${idx === 0 ? 'active' : ''}" data-index="${idx}"></div>`;
+            });
+            promoContainer.innerHTML = `
+                <div class="promo-slider" id="promoSlider" style="min-height: 160px; position: relative;">
+                    ${slidesHtml}
+                </div>
+                <div class="promo-dots" id="promoDots">${dotsHtml}</div>
+            `;
+            
+            // Iniciar carrusel automático (cada 4 segundos)
+            if (carruselInterval) clearInterval(carruselInterval);
+            carruselInterval = setInterval(() => {
+                let next = (slideIndex + 1) % promos.length;
+                cambiarSlide(next, promos);
+            }, 4000);
+            
+            // Eventos para los dots
+            document.querySelectorAll('.dot').forEach(dot => {
+                dot.addEventListener('click', (e) => {
+                    const idx = parseInt(dot.dataset.index);
+                    if (!isNaN(idx) && idx !== slideIndex) {
+                        if (carruselInterval) clearInterval(carruselInterval);
+                        cambiarSlide(idx, promos);
+                        // Reiniciar intervalo
+                        carruselInterval = setInterval(() => {
+                            let next = (slideIndex + 1) % promos.length;
+                            cambiarSlide(next, promos);
+                        }, 4000);
+                    }
+                });
+            });
+            
+            // Pausar al hacer hover sobre el slider (opcional)
+            const sliderDiv = document.getElementById('promoSlider');
+            if (sliderDiv) {
+                sliderDiv.addEventListener('mouseenter', () => {
+                    if (carruselInterval) clearInterval(carruselInterval);
+                });
+                sliderDiv.addEventListener('mouseleave', () => {
+                    if (carruselInterval) clearInterval(carruselInterval);
+                    carruselInterval = setInterval(() => {
+                        let next = (slideIndex + 1) % promos.length;
+                        cambiarSlide(next, promos);
+                    }, 4000);
+                });
+            }
+        }
+        
+        function cambiarSlide(index, promos) {
+            const slides = document.querySelectorAll('.promo-slide');
+            const dots = document.querySelectorAll('.dot');
+            if (!slides.length) return;
+            slides.forEach(slide => slide.classList.remove('active'));
+            dots.forEach(dot => dot.classList.remove('active'));
+            slides[index].classList.add('active');
+            dots[index].classList.add('active');
+            slideIndex = index;
+        }
+
+        // ---------- FUNCIONES DE TIENDA (ya existentes) ----------
         async function cargarDatos() {
             try {
+                // Productos
                 const { data: prods, error: errProds } = await supabaseClient
                     .from('productos')
                     .select('*')
@@ -416,6 +611,7 @@
                 if (errProds) throw errProds;
                 productos = prods || [];
 
+                // Departamentos
                 const { data: depts, error: errDepts } = await supabaseClient
                     .from('departamentos')
                     .select('*')
@@ -423,6 +619,7 @@
                 if (errDepts) throw errDepts;
                 departamentos = depts || [];
 
+                // Relaciones
                 const { data: rels, error: errRels } = await supabaseClient
                     .from('producto_departamento')
                     .select('*');
@@ -433,6 +630,7 @@
                     relaciones[r.producto_id].push(r.departamento_id);
                 });
 
+                // Configuración WhatsApp
                 const { data: config, error: errConf } = await supabaseClient
                     .from('configuracion')
                     .select('valor')
@@ -440,6 +638,10 @@
                     .maybeSingle();
                 if (!errConf && config) whatsappNumero = config.valor;
 
+                // Promociones (activas)
+                promociones = await cargarPromociones();
+                renderPromociones(promociones);
+                
                 renderizarDepartamentos();
                 renderizarProductos();
             } catch (error) {
@@ -609,22 +811,20 @@
             });
         }
 
-        // ---------- EFECTO DE BIENVENIDA: se reduce la altura del hero y se escala el logo ----------
+        // ---------- EFECTO DE BIENVENIDA (reducción de altura) ----------
         const hero = document.getElementById('hero');
         const heroLogo = document.getElementById('heroLogo');
         const smallLogoDiv = document.getElementById('smallLogo');
         let efectoActivo = true;
-        const initialHeroHeight = window.innerHeight; // 100vh real
+        const initialHeroHeight = window.innerHeight;
 
         function handleScroll() {
             if (!efectoActivo) return;
             const scrollY = window.scrollY;
-            // La altura máxima que se reducirá (hasta 0)
             const maxScroll = initialHeroHeight * 0.9;
             let progress = Math.min(1, scrollY / maxScroll);
             
             if (progress >= 0.99) {
-                // Final: ocultar hero, mostrar logo pequeño
                 hero.style.display = 'none';
                 smallLogoDiv.classList.add('visible');
                 efectoActivo = false;
@@ -632,11 +832,8 @@
                 return;
             }
             
-            // Reducir la altura del hero proporcionalmente al scroll
             const newHeight = initialHeroHeight * (1 - progress);
             hero.style.height = `${newHeight}px`;
-            
-            // Escalar el logo y opacidad
             const scale = 1 - (progress * 0.7);
             const opacity = 1 - (progress * 0.9);
             heroLogo.style.transform = `scale(${scale})`;
@@ -644,7 +841,6 @@
         }
 
         window.addEventListener('load', () => {
-            // Reseteamos estados
             hero.style.display = 'flex';
             hero.style.height = `${initialHeroHeight}px`;
             heroLogo.style.transform = 'scale(1)';
